@@ -133,17 +133,14 @@ struct struct_DS18_setting           // Структура для ведения
   };
 
 struct_DS18_setting DS18_settings;  // создаём экземпляр набора параметров
+OneWire DS18_OneWare(portOneWire);  // инициируем OneWire протокол 1-Wire
 
 #include <LCD.h>
 MyLCD LCD_1602(0x27, 16, 2); // инициируем экран
 
-
-
-
-OneWire DS18_OneWare(portOneWire);  // инициируем OneWire протокол 1-Wire
 leOS myTask;                        //create a new istance of the class leOS
 
-
+unsigned long TimerTik_Count=0;
 
 void DS18_SetDS18_resolution(OneWire DS18_OneWare, byte DS18_Sensors_addr[8], byte DS18_resolution)
 { // Функция задаёт параметры точности датчика
@@ -411,58 +408,36 @@ void DS18_sensorRequest ()
     }   
 }
 
-void TimerTik()
-{
-  LCD_1602.noBacklight();
-
-}
-
 void setup(void)
 {
-#ifdef  DEBUG 
-   Serial.begin(SERIAL_BAUD);
-   Serial.println ("Debuging start...........................");
+#ifdef DEBUG
+    Serial.begin(SERIAL_BAUD);
+    Serial.println("Debuging start......4.....................");
 #endif
 
+    myTask.begin(); // запускаем таймер задач
 
-
-   myTask.begin();                     // запускаем таймер задач 
-
- 
     LCD_1602.init();
     LCD_1602.backlight();
-    LCD_1602.LCD_Print("Hello Gl!",-99,"v.0.0.1",-99);
+    LCD_1602.LCD_Print("Hello Gl!", -99, "v.0.0.4", -99);
 
+    pinMode(portDC28B20PWM_1, OUTPUT);
+    pinMode(portDC28B20PWM_2, OUTPUT);
+    digitalWrite(portDC28B20PWM_1, LOW);
+    digitalWrite(portDC28B20PWM_2, LOW);
 
-
-   pinMode(portDC28B20PWM_1, OUTPUT);
-   pinMode(portDC28B20PWM_2, OUTPUT);
-   digitalWrite(portDC28B20PWM_1, LOW);
-   digitalWrite(portDC28B20PWM_2, LOW);
-
-
-
-    DS1822_init();                      // инициируем датчики температуры
-
-    myTask.addTask(DS18_sensorRequest, DS18D20_TIME_SCAN_frequency);    // добавляем задачу опроса температурных датчиков с 
-                                                                        //частотой DS18D20_TIME_SCAN_frequency
-
-
-    myTask.addTask(TimerTik,500);
-
-// typedef void (MyLCD::*MyFuncPtrType)(void);
-// MyFuncPtrType my_func_ptr;
-// my_func_ptr=&MyLCD::LCD_BackLightOff;
-
-//     myTask.addTask(my_func_ptr,500) ;  
-
-//my_memfunc_ptr = &SomeClass::some_member_func;
+    DS1822_init(); // инициируем датчики температуры
+    Serial.println("Before: myTask.addTask");
+    myTask.addTask(DS18_sensorRequest, DS18D20_TIME_SCAN_frequency); // добавляем задачу опроса температурных датчиков с
+                                                                     //частотой DS18D20_TIME_SCAN_frequency
+    Serial.println("After: myTask.addTask");
 }
 
 void loop(void)
 {
+    Serial.println("loop(void");
 
-  if (DS18_settings.D1_tempCounter == 0xFF) {   //0xFF =255 или  11111111 в бинарном. Прикаждои привышении граница температуры пишем 1 в новый быит если получаем 0xFF то значит темперетура превышена на протяжении заданного интервала, введено для избежания "дребезга" 
+  if (DS18_settings.D1_tempCounter == 0xFF) {   //0xFF =255 или  11111111 в бинарном. При каждои привышении граница температуры пишем 1 в новый быит если получаем 0xFF то значит темперетура превышена на протяжении заданного интервала, введено для избежания "дребезга" 
       byte t1 = (DS18_settings.CurrentTemp_D1 - DS18_settings.TargetTemp_D1)*DS18_settings.PWM_StepUP;
       if (t1>255){t1=255;} //t1 -- счетчик увеличения уровня ШИМ 
             #ifdef DEBUG_Loop

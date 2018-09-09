@@ -54,9 +54,9 @@ class MyLCD : public LiquidCrystal_I2C
         if (t2 != -99) {LiquidCrystal_I2C::print(t2);}
     }
 
-    void  LCD_BackLightOff()
-    {
-      LiquidCrystal_I2C::noBacklight();
+    // void  LCD_BackLightOff()
+    // {
+    //   LiquidCrystal_I2C::noBacklight();
 
-    }
+    // }
 };
