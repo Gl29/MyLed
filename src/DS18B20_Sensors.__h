@@ -1,0 +1,13 @@
+#ifndef DS18B20_Gl_H
+#define DS18B20_Gl_H
+
+
+
+void DS18_SetDS18_resolution(OneWire DS18_OneWare, byte DS18_Sensors_addr[8], byte DS18_resolution);
+void DS18_InitConversion(OneWire DS18_OneWare, byte DS18_Sensors_addr[8]);
+float DS18_ReadTemp();
+void DS1822_init ();
+void DS18_sensorRequest ();
+
+
+#endif

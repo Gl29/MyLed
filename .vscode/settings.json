@@ -1,0 +1,9 @@
+{
+    "terminal.integrated.env.windows": {
+        "PATH": "C:\\Users\\Gleb2\\.platformio\\penv\\Scripts;C:\\Users\\Gleb2\\.platformio\\penv;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files (x86)\\ATI Technologies\\ATI.ACE\\Core-Static;C:\\Program Files (x86)\\Pinnacle\\Shared Files\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Users\\Gleb2\\.platformio\\penv\\Scripts\\;C:\\Program Files\\Microsoft VS Code\\bin;C:\\Program Files\\PuTTY\\;C:\\Program Files\\Git\\cmd;C:\\Users\\Gleb2\\AppData\\Local\\Microsoft\\WindowsApps;;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem;C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\;C:\\Program Files (x86)\\ATI Technologies\\ATI.ACE\\Core-Static;C:\\Program Files (x86)\\Pinnacle\\Shared Files\\;C:\\WINDOWS\\System32\\OpenSSH\\;C:\\Users\\Gleb2\\.platformio\\penv\\Scripts\\;C:\\Program Files\\Microsoft VS Code\\bin;C:\\Program Files\\PuTTY\\;C:\\Program Files\\Git\\cmd;C:\\Users\\Gleb2\\AppData\\Local\\Microsoft\\WindowsApps;",
+        "PLATFORMIO_CALLER": "vscode"
+    },
+    "files.autoSave": "afterDelay",
+    "git.autofetch": true,
+    "C_Cpp.intelliSenseEngineFallback": "Enabled"
+}
