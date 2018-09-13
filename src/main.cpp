@@ -64,9 +64,7 @@
 #define portDC18B20PWM_1 5              // указаываем порт для PWM DC18B20_1  
 #define portDC18B20PWM_2 6              // указаываем порт для PWM DC18B20_2
 
-
 //uint32_t tmp1=0; //переменная для теста. Удалить
-
 
 leOS myTask;                        //create a new istance of the class leOS
 
@@ -98,8 +96,6 @@ void LCD_BackLight_OFF()
 { 
     LCD_1602NeedOff =1;     // Сработал таймер, пора выключать подсветку.  
 }
-
-
 
 byte DS18_resolution = 12;           // устанавливам точность измерения температуры на 10, оптимальным является 10битное кодирование 187,5мс
                                    // Разрешающая способность температурного преобразователя может быть изменена пользователем и
@@ -141,7 +137,7 @@ OneWire DS18_OneWare(portOneWire);   // инициируем OneWire прото�
 unsigned long TimerTik_Count=0;  //прописать комментарий
 tmElements_t tm; // переменная которая хранит время в формте TimeLib.h
 
-void DS18_SetDS18_resolution(OneWire DS18_OneWare, byte DS18_Sensors_addr[8], byte DS18_resolution)
+bool DS18_SetDS18_resolution(OneWire DS18_OneWare, byte DS18_Sensors_addr[8], byte DS18_resolution)
 { // Функция задаёт параметры точности датчика
 
     #ifdef  DEBUG_DS18_SetDS18_resolution 
@@ -187,6 +183,9 @@ void DS18_SetDS18_resolution(OneWire DS18_OneWare, byte DS18_Sensors_addr[8], by
         Serial.print("DS18_WriteConfByte=");
         Serial.println(tData[4], HEX);
     #endif
+
+    if (tData[4] !=0 ) return true; else return false;  //NULL
+    
 }
 
 void DS18_InitConversion(OneWire DS18_OneWare, byte DS18_Sensors_addr[8])
@@ -303,8 +302,10 @@ float DS18_ReadTemp(OneWire DS18_OneWare, byte DS18_Sensors_addr[8])
     return celsius;
 }
 
-void DS1822_init ()
+bool DS1822_init ()
 { // Функция инициализирует датчики температуры и записывает их уникальные номера в переменную  DS18_Sensors_addr и указатель DS18_pAdr 
+    byte DS18SensorsInitOk[2];
+   
     #ifdef  DEBUG_DS1822_init 
          Serial.println("Func DS1822_init start: ");
     #endif
@@ -318,7 +319,9 @@ void DS1822_init ()
         {
             DS18_Sensors_addr[tCount][i] = DS18_Sensors_tmp_addr[i]; // записываем 8 байтов уникальных кодов в память
         }
-        DS18_SetDS18_resolution(DS18_OneWare, DS18_Sensors_tmp_addr, DS18_resolution); // задаём параметры точности датчиков
+        
+        if (DS18_SetDS18_resolution(DS18_OneWare, DS18_Sensors_tmp_addr, DS18_resolution))  // задаём параметры точности датчиков
+        {DS18SensorsInitOk[tCount] =1;} else {DS18SensorsInitOk[tCount] =0;}                // если DS18_SetDS18_resolution вернула TRUE заначит инициализация прошла успешно
         tCount++;
     }
     DS18_pAdr = &DS18_Sensors_addr[0][0]; // создаём указатель на первый элемент массива
@@ -336,6 +339,8 @@ void DS1822_init ()
         //Serial.println (*(DS18_pAdr),HEX);     //Serial.println (*(DS18_pAdr+8),HEX);   //Serial.println (*(DS18_pAdr+1),HEX);// Печать байтов памяти по указателю
 
     #endif
+    if (DS18SensorsInitOk[0]==1 && DS18SensorsInitOk[1]==1) return true; else return false;
+
 }
 
 void DS18_sensorRequest ()
@@ -447,11 +452,11 @@ void DS18_sensorRequest ()
             tm.Year = CalendarYrToTm(Year);
             //tm.Year = CalendarYrToTm(Year);
 
-            Serial.println (str);
-            Serial.println (Year);
-            Serial.println (CalendarYrToTm(Year)); 
-            Serial.println (y2kYearToTm(CalendarYrToTm(Year)));             
-            Serial.println (tm.Year); 
+            // Serial.println (str);
+            // Serial.println (Year);
+            // Serial.println (CalendarYrToTm(Year)); 
+            // Serial.println (y2kYearToTm(CalendarYrToTm(Year)));             
+            // Serial.println (tm.Year); 
 
             return true;
         }
@@ -462,11 +467,11 @@ void DS18_sensorRequest ()
 
 void setup(void)
 {       
-uint32_t day111;
+    uint32_t day111;
 
-// tmElements_t tm;
- bool parse=false;
- bool config=false;
+    // tmElements_t tm;
+    bool parse=false;
+    bool config=false;
 
     #ifdef DEBUG
         Serial.begin(SERIAL_BAUD);
@@ -480,9 +485,6 @@ uint32_t day111;
                     //Reads the current date & time as a 32 bit "time_t" number. 
                     //Zero is returned if the DS1307 is not running or does not respond.
 
-                    // Serial.print("day111");
-                    // Serial.println(day111);
-
     #ifdef SetSystemTime  // устанавливаем время в RTC = системному времени и дате в момент компиляции 
             if (getDate(__DATE__) && getTime(__TIME__)) 
             {
@@ -492,70 +494,55 @@ uint32_t day111;
             }
     #endif
 
-   
-        //  Serial.println();
-        //  day111=RTC.get();
-        //  Serial.print("From RTS. day111");
-        //  Serial.println(day111);
-        
-    if (RTC.read(tm)) 
-    {
-        Serial.println ("Время в модуле RTS:");
-        Serial.print("День:");
-        Serial.print(tm.Day);
-        Serial.print(", Месяц:");
-        Serial.print(tm.Month);
-        Serial.print(", Год:");
-        Serial.println(tmYearToCalendar(tm.Year));
-        Serial.print(tm.Minute);
-        Serial.print(" минут, ");
-        Serial.print(tm.Hour);
-        Serial.print(" часов.");
-        
-    }
-    else {Serial.println ("Ошибка при считывании времени из модуля RTS");}
-
-
-    //   if (RTC.chipPresent()) {
-    //         Serial.println("The DS1307 is stopped.  Please run the SetTime");
-    //         Serial.print("RTC.chipPresent()=");
-    //         Serial.println(RTC.chipPresent());
-
-    //             setSyncProvider(RTC.get);   // Reads the current date & time as a 32 bit "time_t" number. 
-    //                                         //Zero is returned if the DS1307 is not running or does not respond.
-    //             if (timeStatus() != timeSet)
-    //                 {Serial.println("Unable to sync with the RTC");
-    //                 Serial.print ("timeStatus()=");
-    //                 Serial.println (timeStatus());
-    //                 Serial.print ("timeSet=");
-    //                 Serial.println (timeSet);  }          
-    //             else
-    //                 Serial.println("RTC has set the system time");
-
-    //   } else {
-    //        Serial.println("DS1307 read error!  Please check the circuitry.");
-    //        Serial.println(RTC.chipPresent());
-    //        Serial.println();}
-    // #endif
-
-                            
-
-
         pinMode(portDC18B20PWM_1, OUTPUT);
         pinMode(portDC18B20PWM_2, OUTPUT);
         digitalWrite(portDC18B20PWM_1, LOW);
         digitalWrite(portDC18B20PWM_2, LOW);
-        DS1822_init(); // инициируем датчики температуры
+
 
         myTask.begin();                                                  // запускаем таймер задач
         myTask.addTask(DS18_sensorRequest, DS18D20_TIME_SCAN_frequency); // добавляем задачу опроса температурных датчиков с
                                                                          //частотой DS18D20_TIME_SCAN_frequency
         myTask.addTask(LCD_BackLight_OFF, LCD_1602BacklightOffTime);
 
+
         LCD_1602.init();
         LCD_1602.backlight();
         LCD_1602.LCD_Print("Hello Gl!", -99, "v.0.0.5", -99);
 
+        if (DS1822_init()) 
+            {
+               #ifdef DEBUG 
+                  Serial.println ("Init DC18B20 - OK");
+                #endif
+            }
+            else 
+            {
+                #ifdef DEBUG 
+                  Serial.println ("Init DC18B20 - Error");
+                #endif          
+                LCD_1602.LCD_Print("Error!!!", -99, "Init DC18B20", -99);} // инициируем датчики температуры
+
+
+      
+            if (RTC.read(tm)) 
+            {
+                #ifdef DEBUG    
+                    Serial.println ("Init RTS Module - OK");    
+                    Serial.println ("Время в модуле RTS:");
+                    Serial.print("Дата: ");
+                    Serial.print(tm.Day); Serial.print("/"); Serial.print(tm.Month);
+                    Serial.print("/"); Serial.println(tmYearToCalendar(tm.Year));
+                    Serial.print("Время: ");
+                    Serial.print(tm.Hour); Serial.print(":"); Serial.print(tm.Minute); Serial.print(":");Serial.println(tm.Second);
+                #endif  
+            }
+            else 
+            {
+                #ifdef DEBUG                 
+                    Serial.println ("Ошибка при считывании времени из модуля RTS");
+                #endif                     
+                LCD_1602.LCD_Print("Error!!!", -99, "Init RTS Module", -99);}
 }
 
 void loop(void)
