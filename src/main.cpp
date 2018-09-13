@@ -1,49 +1,13 @@
-   
-    //[F0h] - SEARCH ROM  (Поиск) Если Главное устройство не знает серийный номер устройства подключенного к шине, то существует возможность идентифицировать коды ROM каждого устройства подключенного к шине.
-    //        Для этого необходимо использовать команду Поиск ROM [F0h] (Search). Эта команда действует как команда Чтения ROM объединенная с командой Соответствия ROM
-    //[33h] - READ ROM  Эта команда может только использоваться, когда есть одно подчиненное устройство на шине. Этакоманда позволяет устройству управления шиной читать ROM подчиненного устройства (код 64 бита), не используя процедуру Поиска ROM.
-    //[55h] - MATCH ROM  Команда соответствия ROM, сопровождаемая последовательностью кода ROM на 64 бита позволяет устройству управления шиной обращаться к определенному подчиненному устройству на шине.  На функциональную команду, посланную мастером; ответит только ведомый с точно соответствующим 64-разрядным кодом ROM, все другие ведомые на шине будут ожидать импульс сброса.
-    //[CCh] - SKIP ROM  Пропуск ROM Главное устройство может использовать эту команду, чтобы обратиться ко всем устройствам на шине одновременно.
-    //        Например, главное устройство может заставить, чтобы все DS18 (датчики температуры)на шине, начали одновременно температурные преобразования.
-    //        Для этого необходимо выдать на шину команду Пропуска ROM [CCh] сопровождаемую командой Температурного преобразования [44h].
-
-    //[ECh] - ALARM SEARCH Операция этой команды идентична команде Search ROM за исключением того, что ответят только ведомые с установленным флагом тревоги.
-
-    //[44h] - CONVERT T Конвертировать температуру Эта команда начинает единственное температурное преобразование. После окончания преобразования данные сохраняются в 2-байтовом температурном регистре в оперативной памяти
-    //        Если DS18 питается от внешнего источника питания, главное устройство может считывать состояние шины после команды Конвертирования температуры [44h].
-    //        Если на шине логический «Ноль» - это значит, что DS18 выполняет температурное преобразование. Если на шине логическая «Единица» – это значит, что преобразование окончено и можно, считывать данные.
-    //[4Eh] - Запись в память Эта команда позволяет устройству управления записывать 3 байта данных в память DS18. Первый байт данных записывается в регистр (TH), второй байт записывается в регистр (TL),
-    //        и третий байт записывается в регистр конфигурации. Данные должны быть переданы наименьшим значащим битом вперед
-    //[BEh] - Чтение памяти Эта команда позволяет Устройство управленияу читать содержание ПАМЯТИ. Передача данных начинается с наименьшего значащего бита байта 0 и продолжается до 9-ого байта (байт 8 - циклический
-    //        контроль избыточности). Устройство управления может выполнить сброс, чтобы закончить чтение в любое время, если необходимо только часть данных.
-    //[ECh] - Мастер-устройство может проверить состояние сигнальных флагов всех DS18 на шине, послав команду Alarm Search. Любой DS18 с установленным сигнальным флагом ответит на команду, так что мастер может точно определить, какие DS18 испытали сигнальное условие.
-
-    //[48h] - Копирование ОЗУ В ПЗУ Эта команда копирует содержание регистров (TH, TL) и регистра конфигурации (байты 2, 3 и 4) в ПЗУ.
-
-    //
-
-    // байт 0 - Мл. байт температуры (50h) (85°C)
-    // байт 1 - Ст. байт температуры (05h) EEPROM
-    // байт 2 - Регистр TH или байт пользователя 1*
-    // байт 3 - Регистр TL или байт пользователя 2*
-    // байт 4 - Регистр конфигурации*
-    // байт 5 - Резерв (FFh)
-    // байт 6 Резерв (0Ch)
-    // байт 7 Резерв (10h)
-    // байт 8 CRC*
-    // *Состояние при включения питания зависит от значения, сохраненного в EEPROM
-
-    //Последовательность операций для обращения к DS18:
-    //Шаг 1. Инициализация
-    //Шаг 2. Команда ROM (сопровождаемая любым требуемым обменом данных) Эти команды оперируют уникальным 64-разрядным кодом ROM каждого ведомого и позволяют мастеру выбрать определенное устройство, если на шине 1-Wire присутствует несколько устройств
-    //Шаг 3. Функциональная Команда DS18 (сопровождаемая любым требуемым обменом данных)
-
 #include <Arduino.h>
 #include <OneWire.h>    //Библиотека 1-Wire. для цифровых датчиков температуры 
-//#include <Wire.h>       // подключаем библиотеку Wire 
+//#include <Wire.h>
+//#include <RTClib.h>
+#include <TimeLib.h>
+#include <DS1307RTC.h>  //a basic DS1307 library that returns time as a time_t. 
+                        // DS1307RTC allows you to access real time clock (RTC) chips compatible with the DS1307. 
+                        // It is intended to be used with the Time library.
 
 
-#include <TimeLib.h> 
 // #include <EEPROM.h>  // Библиотека для работы с EEPROM 
 #include <leOS.h>       // Шедуллер задач
                         // Ядро leOS обеспечивает диспетчеризацию вызовов пользовательских функций согласно заданным временным интервалам. 
@@ -76,32 +40,68 @@
 
 
 
+ #define DEBUG                        // Включает общий режим отладки
 
 
+// #define DEBUG_DS18_sensorRequest   // Включает режим отладки для функции DEBUG_DS18_sensorRequest
+// #define DEBUG_DS1822_init
+// #define DEBUG_DS18_ReadTemp
+// #define DEBUG_DS18_InitConversion
+// #define DEBUG_DS18_SetDS18_resolution
+#define DEBUG_Loop                      // Включает режим отладки для функции Void LOOP
+#define SetSystemTime                   // Включает режим отладки для функции Void LOOP
 
-#define DEBUG                        // Включает общий режим отладки
-//#define DEBUG_DS18_sensorRequest   // Включает режим отладки для функции DEBUG_DS18_sensorRequest
-//#define DEBUG_DS1822_init
-//#define DS18_ReadTemp
-//#define DS18_InitConversion
-//#DEBUG DS18_SetDS18_resolution
-#define DEBUG_Loop                    // Включает режим отладки для функции Void LOOP
 
 #define SERIAL_BAUD 9600
-#define DS18D20_TIME_SCAN_frequency 5000 //10000 // Время опроса датчиков температуры м.сек
+#define DS18D20_TIME_SCAN_frequency 15000 //10000 // Время опроса датчиков температуры м.сек
+#define LCD_1602BacklightOffTime    5000  // Время через которое выключается подсветка экрана м.сек
+
+#define DC18_MaxGoodTemp 30      // Максимальная температура после превышения которой срабатывает событие (градусы цельсия)
 
 
 //  PINs к которым прицеплена переферия ()
 #define portOneWire 2                   // указаываем порт OneWire   протокол 1-Wire
-#define portDC28B20PWM_1 5              // указаываем порт для PWM DC18B20_1  
-#define portDC28B20PWM_2 6              // указаываем порт для PWM DC18B20_2
+#define portDC18B20PWM_1 5              // указаываем порт для PWM DC18B20_1  
+#define portDC18B20PWM_2 6              // указаываем порт для PWM DC18B20_2
+
+
+//uint32_t tmp1=0; //переменная для теста. Удалить
+
+
+leOS myTask;                        //create a new istance of the class leOS
+
+class MyLCD : public LiquidCrystal_I2C
+{
+  public:
+    MyLCD(uint8_t lcd_Addr,uint8_t lcd_cols,uint8_t lcd_rows) : LiquidCrystal_I2C ( lcd_Addr, lcd_cols, lcd_rows)   // MyLCD передается в конструктор с параметром класса FirstClass
+    {}
+ 
+    void LCD_Print(const char Str1[16], const float t1, const char Str2[16], const float t2) // Функция которая выводит на LCD значение температуры
+    {   
+        LiquidCrystal_I2C::backlight();
+        LiquidCrystal_I2C::clear();
+        LiquidCrystal_I2C::setCursor(0, 0); // Устанавливаем курсор в начало 1 строки
+        LiquidCrystal_I2C::printstr(Str1);
+        if (t1 != -99) {LiquidCrystal_I2C::print(t1);}
+       
+        LiquidCrystal_I2C::setCursor(0, 1);
+        LiquidCrystal_I2C::printstr(Str2);
+        if (t2 != -99) {LiquidCrystal_I2C::print(t2);}
+    }
+
+};
+
+MyLCD  LCD_1602(0x27,16,2);           // инициируем экран //int(0x27)
+byte LCD_1602NeedOff=0;               // Флаг необходимости выключить подсветку 
+
+void LCD_BackLight_OFF()
+{ 
+    LCD_1602NeedOff =1;     // Сработал таймер, пора выключать подсветку.  
+}
 
 
 
-
-
-
-byte DS18_resolution = 12;         // устанавливам точность измерения температуры на 10, оптимальным является 10битное кодирование 187,5мс
+byte DS18_resolution = 12;           // устанавливам точность измерения температуры на 10, оптимальным является 10битное кодирование 187,5мс
                                    // Разрешающая способность температурного преобразователя может быть изменена пользователем и
                                    // составляет 9, 10, 11, или 12 битов, соответствуя приращениям (дискретности измерения температуры)
                                    // 0.5°C (93.75ms), 0.25°C(187.5ms), 0.125°C (375ms), и 0.0625°C (750ms), соответственно.
@@ -124,23 +124,22 @@ struct struct_DS18_setting           // Структура для ведения
                                        //!!! потом надо перевести на INT + DS18_divider
       float CurrentTemp_D1;           // тут храним значение последней считанной с датчиков температуры  
       float CurrentTemp_D2;            
-      byte TargetTemp_D1 = 30;        // тут храним значение максимально допустимой температуры после которой начинаем включать вентилятор
-      byte TargetTemp_D2 = 30;            
+      byte TargetTemp_D1 = DC18_MaxGoodTemp;        // тут храним значение максимально допустимой температуры после которой начинаем включать вентилятор
+      byte TargetTemp_D2 = DC18_MaxGoodTemp;            
       bool D1_Start;                  // флаги. если = истина - пора включать вентилятор
       bool D2_Start;
       byte PWM_StepUP = 35; //25;     // переменная хранит шаг роста ШИМ в зависимости от разницы целевой и фактической температуры
 
   };
 
-struct_DS18_setting DS18_settings;  // создаём экземпляр набора параметров
-OneWire DS18_OneWare(portOneWire);  // инициируем OneWire протокол 1-Wire
+struct_DS18_setting DS18_settings;   // создаём экземпляр набора параметров
+OneWire DS18_OneWare(portOneWire);   // инициируем OneWire протокол 1-Wire
 
-#include <LCD.h>
-MyLCD LCD_1602(0x27, 16, 2); // инициируем экран
 
-leOS myTask;                        //create a new istance of the class leOS
 
-unsigned long TimerTik_Count=0;
+
+unsigned long TimerTik_Count=0;  //прописать комментарий
+tmElements_t tm; // переменная которая хранит время в формте TimeLib.h
 
 void DS18_SetDS18_resolution(OneWire DS18_OneWare, byte DS18_Sensors_addr[8], byte DS18_resolution)
 { // Функция задаёт параметры точности датчика
@@ -369,12 +368,7 @@ void DS18_sensorRequest ()
         if (DS18_OneWare.read()) // если OneWare находится в статусе read (показания температуры сконвертированы и доступны для чтения)
         {   DS18_settings.CurrentTemp_D1 = DS18_ReadTemp(DS18_OneWare, DS18_pAdr) / DS18_divider;
             DS18_settings.CurrentTemp_D2 = DS18_ReadTemp(DS18_OneWare, (DS18_pAdr+8)) / DS18_divider;
-          //  LCD_Print(DS18_settings.CurrentTemp_D1,DS18_settings.CurrentTemp_D2); // выводим температуры на экран
-          //  LCD_1602.LCD_Print_temp(DS18_settings.CurrentTemp_D1,DS18_settings.CurrentTemp_D2);
-
-            LCD_1602.LCD_Print ("S1.temp=",DS18_settings.CurrentTemp_D1,"S1.temp=", DS18_settings.CurrentTemp_D2);
-
-
+            
             if (DS18_settings.CurrentTemp_D1 > DS18_settings.TargetTemp_D1) {
                 DS18_settings.D1_tempCounter = DS18_settings.D1_tempCounter << 1; // <<	Сдвиг влево
                 DS18_settings.D1_tempCounter = DS18_settings.D1_tempCounter ^ 1;  //исключающее ИЛИ "^" выдает истину, если только один из операндов истинен. В противном случае получается ложь.
@@ -404,38 +398,173 @@ void DS18_sensorRequest ()
 
             DS18_readstage = 0;
             DS18_last_Call_Time = now(); // сбрасываем счётчик времени опроса таймера
+
+            LCD_1602NeedOff =0; // ставим признак что надо включить подсветку
+            myTask.restartTask(LCD_BackLight_OFF); // перезапускаем таймер выключения экрана 
+            LCD_1602.LCD_Print ("S1.temp=",DS18_settings.CurrentTemp_D1,"S1.temp=", DS18_settings.CurrentTemp_D2);
+
         }
     }   
 }
 
-void setup(void)
-{
-#ifdef DEBUG
-    Serial.begin(SERIAL_BAUD);
-    Serial.println("Debuging start......4.....................");
+#ifdef SetSystemTime  // процедуры нужны для установики системного времени в модуль RTC  в блоке void setup(void)
+        const char *monthName[12] = {
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+        };
+
+        bool getTime(const char *str)
+        {
+            int Hour, Min, Sec;
+
+            if (sscanf(str, "%d:%d:%d", &Hour, &Min, &Sec) != 3)
+                return false;
+            tm.Hour = Hour;
+            tm.Minute = Min;
+            tm.Second = Sec;
+            return true;
+        }
+
+        bool getDate(const char *str)
+        {
+            char Month[12];
+            int Day, Year;
+            uint8_t monthIndex;
+           
+
+
+            if (sscanf(str, "%s %d %d", Month, &Day, &Year) != 3) return false;
+
+            for (monthIndex = 0; monthIndex < 12; monthIndex++)
+            {
+                if (strcmp(Month, monthName[monthIndex]) == 0)
+                    break;
+            }
+            if (monthIndex >= 12)
+                return false;
+            tm.Day = Day;
+            tm.Month = monthIndex + 1;
+            tm.Year = Year;
+            //tm.Year = CalendarYrToTm(Year);
+
+            Serial.println (str);
+            Serial.println (Year);
+            Serial.println (CalendarYrToTm(Year)); 
+            Serial.println (y2kYearToTm(CalendarYrToTm(Year)));             
+            Serial.println (tm.Year); 
+
+            return true;
+        }
 #endif
 
-    myTask.begin(); // запускаем таймер задач
 
-    LCD_1602.init();
-    LCD_1602.backlight();
-    LCD_1602.LCD_Print("Hello Gl!", -99, "v.0.0.4", -99);
 
-    pinMode(portDC28B20PWM_1, OUTPUT);
-    pinMode(portDC28B20PWM_2, OUTPUT);
-    digitalWrite(portDC28B20PWM_1, LOW);
-    digitalWrite(portDC28B20PWM_2, LOW);
 
-    DS1822_init(); // инициируем датчики температуры
-    Serial.println("Before: myTask.addTask");
-    myTask.addTask(DS18_sensorRequest, DS18D20_TIME_SCAN_frequency); // добавляем задачу опроса температурных датчиков с
-                                                                     //частотой DS18D20_TIME_SCAN_frequency
-    Serial.println("After: myTask.addTask");
+void setup(void)
+{       
+uint32_t day111;
+
+// tmElements_t tm;
+ bool parse=false;
+ bool config=false;
+
+    #ifdef DEBUG
+        Serial.begin(SERIAL_BAUD);
+        Serial.println("Debuging start......3.....................");
+        Serial.println();
+        Serial.println();
+    #endif
+
+
+    day111=RTC.get();  //DS1307RTC Library  ХЗ но без этой строки плата RTC не определяется
+                    //Reads the current date & time as a 32 bit "time_t" number. 
+                    //Zero is returned if the DS1307 is not running or does not respond.
+
+                    // Serial.print("day111");
+                    // Serial.println(day111);
+
+    #ifdef SetSystemTime  // устанавливаем время в RTC = системному времени и дате в момент компиляции 
+            if (getDate(__DATE__) && getTime(__TIME__)) 
+            {
+                parse = true;
+                if (RTC.write(tm)) //configure the RTC with this info
+                {config = true;}
+            }
+    #endif
+
+   
+        //  Serial.println();
+        //  day111=RTC.get();
+        //  Serial.print("From RTS. day111");
+        //  Serial.println(day111);
+        
+    if (RTC.read(tm)) 
+    {
+        Serial.println ("Время в модуле RTS:");
+        Serial.print("День:");
+        Serial.print(tm.Day);
+        Serial.print(", Месяц:");
+        Serial.print(tm.Month);
+        Serial.print(", Год:");
+        Serial.println(tm.Year);
+        Serial.print(tm.Minute);
+        Serial.print(" минут, ");
+        Serial.print(tm.Hour);
+        Serial.print(" часов.");
+        
+    }
+    else {Serial.println ("Ошибка при считывании времени из модуля RTS");}
+
+
+    //   if (RTC.chipPresent()) {
+    //         Serial.println("The DS1307 is stopped.  Please run the SetTime");
+    //         Serial.print("RTC.chipPresent()=");
+    //         Serial.println(RTC.chipPresent());
+
+    //             setSyncProvider(RTC.get);   // Reads the current date & time as a 32 bit "time_t" number. 
+    //                                         //Zero is returned if the DS1307 is not running or does not respond.
+    //             if (timeStatus() != timeSet)
+    //                 {Serial.println("Unable to sync with the RTC");
+    //                 Serial.print ("timeStatus()=");
+    //                 Serial.println (timeStatus());
+    //                 Serial.print ("timeSet=");
+    //                 Serial.println (timeSet);  }          
+    //             else
+    //                 Serial.println("RTC has set the system time");
+
+    //   } else {
+    //        Serial.println("DS1307 read error!  Please check the circuitry.");
+    //        Serial.println(RTC.chipPresent());
+    //        Serial.println();}
+    // #endif
+
+                            
+
+
+        pinMode(portDC18B20PWM_1, OUTPUT);
+        pinMode(portDC18B20PWM_2, OUTPUT);
+        digitalWrite(portDC18B20PWM_1, LOW);
+        digitalWrite(portDC18B20PWM_2, LOW);
+        DS1822_init(); // инициируем датчики температуры
+
+        myTask.begin();                                                  // запускаем таймер задач
+        myTask.addTask(DS18_sensorRequest, DS18D20_TIME_SCAN_frequency); // добавляем задачу опроса температурных датчиков с
+                                                                         //частотой DS18D20_TIME_SCAN_frequency
+        myTask.addTask(LCD_BackLight_OFF, LCD_1602BacklightOffTime);
+
+        LCD_1602.init();
+        LCD_1602.backlight();
+        LCD_1602.LCD_Print("Hello Gl!", -99, "v.0.0.5", -99);
+
 }
 
 void loop(void)
 {
-    Serial.println("loop(void");
+   if  (LCD_1602NeedOff == 1)
+        {LCD_1602.noBacklight();}   //включаем / выключаем подсветку экрана 
+   else if (LCD_1602NeedOff == 0){LCD_1602.backlight();}
+   
+
 
   if (DS18_settings.D1_tempCounter == 0xFF) {   //0xFF =255 или  11111111 в бинарном. При каждои привышении граница температуры пишем 1 в новый быит если получаем 0xFF то значит темперетура превышена на протяжении заданного интервала, введено для избежания "дребезга" 
       byte t1 = (DS18_settings.CurrentTemp_D1 - DS18_settings.TargetTemp_D1)*DS18_settings.PWM_StepUP;
@@ -448,12 +577,12 @@ void loop(void)
                 Serial.print (",  PWM level: ");
                 Serial.println (float(t1),2);
             #endif
-         analogWrite(portDC28B20PWM_1, t1); // записываем значение ШИМ в порт
-         //digitalWrite(portDC28B20PWM_1, HIGH);
+         analogWrite(portDC18B20PWM_1, t1); // записываем значение ШИМ в порт
+         //digitalWrite(portDC18B20PWM_1, HIGH);
         }  
         else {
-          //digitalWrite(portDC28B20PWM_1, LOW);
-          analogWrite(portDC28B20PWM_1, 00);
+          //digitalWrite(portDC18B20PWM_1, LOW);
+          analogWrite(portDC18B20PWM_1, 00);
         }
 
   if (DS18_settings.D2_tempCounter == 0xFF) {
@@ -467,12 +596,12 @@ void loop(void)
                 Serial.print (",  PWM level: ");
                 Serial.println (float(t2),2);
             #endif
-      analogWrite(portDC28B20PWM_2, t2); // записываем значение ШИМ в порт
-      //digitalWrite(portDC28B20PWM_1, HIGH);
+      analogWrite(portDC18B20PWM_2, t2); // записываем значение ШИМ в порт
+      //digitalWrite(portDC18B20PWM_1, HIGH);
       }  
       else {
-          //digitalWrite(portDC28B20PWM_2, LOW);
-          analogWrite(portDC28B20PWM_2, 00);
+          //digitalWrite(portDC18B20PWM_2, LOW);
+          analogWrite(portDC18B20PWM_2, 00);
    }
 
 }

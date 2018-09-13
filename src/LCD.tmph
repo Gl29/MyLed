@@ -23,22 +23,6 @@
 class MyLCD : public LiquidCrystal_I2C
 {
   public:
-  
-
-      MyLCD(int8_t lcd_Addr, int8_t lcd_cols, int8_t lcd_rows) :  LiquidCrystal_I2C( lcd_Addr,  lcd_cols,  lcd_rows) {};
-
-    // void LCD_Print_temp(float t1, float t2) // Функция которая выводит на LCD значение температуры
-    // {
-    //   LiquidCrystal_I2C::clear();
-    //   LiquidCrystal_I2C::setCursor(0, 0);   // Устанавливаем курсор в начало 1 строки
-    //   LiquidCrystal_I2C::print("S1.temp="); // Выводим текст
-    //   LiquidCrystal_I2C::print(t1);
-
-    //   LiquidCrystal_I2C::setCursor(0, 1);   // Устанавливаем курсор в начало 1 строки
-    //   LiquidCrystal_I2C::print("S2.temp="); // Выводим текст
-    //   LiquidCrystal_I2C::print(t2);
-    // }
-
 
     void LCD_Print(const char Str1[16], const float t1, const char Str2[16], const float t2) // Функция которая выводит на LCD значение температуры
     {   
@@ -54,9 +38,4 @@ class MyLCD : public LiquidCrystal_I2C
         if (t2 != -99) {LiquidCrystal_I2C::print(t2);}
     }
 
-    // void  LCD_BackLightOff()
-    // {
-    //   LiquidCrystal_I2C::noBacklight();
-
-    // }
 };
