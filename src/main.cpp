@@ -444,7 +444,7 @@ void DS18_sensorRequest ()
                 return false;
             tm.Day = Day;
             tm.Month = monthIndex + 1;
-            tm.Year = Year;
+            tm.Year = CalendarYrToTm(Year);
             //tm.Year = CalendarYrToTm(Year);
 
             Serial.println (str);
@@ -506,7 +506,7 @@ uint32_t day111;
         Serial.print(", Месяц:");
         Serial.print(tm.Month);
         Serial.print(", Год:");
-        Serial.println(tm.Year);
+        Serial.println(tmYearToCalendar(tm.Year));
         Serial.print(tm.Minute);
         Serial.print(" минут, ");
         Serial.print(tm.Hour);
