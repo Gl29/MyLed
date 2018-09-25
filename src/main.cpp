@@ -64,6 +64,9 @@
 #define portDC18B20PWM_1 5              // указаываем порт для PWM DC18B20_1  
 #define portDC18B20PWM_2 6              // указаываем порт для PWM DC18B20_2
 
+const String errRTC = "Error read RTS";      // текст ошибки доступа к модулю RTC
+const String errDC18B20 = "Error init DC18B20";  // текст ошибки инициализации датчиков темперетуры
+
 //uint32_t tmp1=0; //переменная для теста. Удалить
 
 leOS myTask;                        //create a new istance of the class leOS
@@ -71,26 +74,47 @@ leOS myTask;                        //create a new istance of the class leOS
 class MyLCD : public LiquidCrystal_I2C
 {
   public:
+    String LCDRow1; // перемення в которой записываем верхнюю (1) строку LCD дисплея
+    String LCDRow2; // перемення в которой записываем нижнюю (2) строку LCD дисплея
+
+
     MyLCD(uint8_t lcd_Addr,uint8_t lcd_cols,uint8_t lcd_rows) : LiquidCrystal_I2C ( lcd_Addr, lcd_cols, lcd_rows)   // MyLCD передается в конструктор с параметром класса FirstClass
     {}
  
-    void LCD_Print(const char Str1[16], const float t1, const char Str2[16], const float t2) // Функция которая выводит на LCD значение температуры
-    {   
-        LiquidCrystal_I2C::backlight();
-        LiquidCrystal_I2C::clear();
-        LiquidCrystal_I2C::setCursor(0, 0); // Устанавливаем курсор в начало 1 строки
-        LiquidCrystal_I2C::printstr(Str1);
-        if (t1 != -99) {LiquidCrystal_I2C::print(t1);}
+    // void LCD_Print(const char Str1[16], const float t1, const char Str2[16], const float t2) // Функция которая выводит на LCD значение температуры
+    // {   // скорее всего данная функция не нужна УДАЛИТЬ
+    //     LiquidCrystal_I2C::backlight();
+    //     LiquidCrystal_I2C::clear();
+    //     LiquidCrystal_I2C::setCursor(0, 0); // Устанавливаем курсор в начало 1 строки
+    //     LiquidCrystal_I2C::printstr(Str1);
+    //     if (t1 != -99) {LiquidCrystal_I2C::print(t1);}
        
+    //     LiquidCrystal_I2C::setCursor(0, 1);
+    //     LiquidCrystal_I2C::printstr(Str2);
+    //     if (t2 != -99) {LiquidCrystal_I2C::print(t2);}
+    // }
+
+    void LCD_Print() // Функция которая выводит на LCD значение температуры
+    {   
+        LiquidCrystal_I2C::setCursor(0, 0); // Устанавливаем курсор в начало 1 строки
+        LiquidCrystal_I2C::print(LCDRow1);
         LiquidCrystal_I2C::setCursor(0, 1);
-        LiquidCrystal_I2C::printstr(Str2);
-        if (t2 != -99) {LiquidCrystal_I2C::print(t2);}
+        LiquidCrystal_I2C::print(LCDRow2);
+        Serial.print ("LCDRow1=");
+        Serial.println (LCDRow1);
+        Serial.print ("LCDRow2=");
+        Serial.println (LCDRow2);
+     
     }
+
+
 
 };
 
 MyLCD  LCD_1602(0x27,16,2);           // инициируем экран //int(0x27)
 byte LCD_1602NeedOff=0;               // Флаг необходимости выключить подсветку 
+
+
 
 void LCD_BackLight_OFF()
 { 
@@ -134,7 +158,7 @@ OneWire DS18_OneWare(portOneWire);   // инициируем OneWire прото�
 
 
 
-unsigned long TimerTik_Count=0;  //прописать комментарий
+//unsigned long TimerTik_Count=0;  //прописать комментарий
 tmElements_t tm; // переменная которая хранит время в формте TimeLib.h
 
 bool DS18_SetDS18_resolution(OneWire DS18_OneWare, byte DS18_Sensors_addr[8], byte DS18_resolution)
@@ -406,10 +430,21 @@ void DS18_sensorRequest ()
 
             LCD_1602NeedOff =0; // ставим признак что надо включить подсветку
             myTask.restartTask(LCD_BackLight_OFF); // перезапускаем таймер выключения экрана 
-            LCD_1602.LCD_Print ("S1.temp=",DS18_settings.CurrentTemp_D1,"S1.temp=", DS18_settings.CurrentTemp_D2);
+
+            // генерируем строку 2 LCD дисплея с данными температуры
+            LCD_1602.LCDRow2 = "t=" + String(DS18_settings.CurrentTemp_D1)  + " / " + String(DS18_settings.CurrentTemp_D2);    
 
         }
     }   
+}
+
+
+String printDigits(int digits) { // функция превращает число в текстовую строку, если число из одной цифры то дописывает ведущий ноль
+  String t;
+  if(digits < 10) 
+    {t="0"+ String(digits);}
+    else {t=digits;}
+    return t;
 }
 
 #ifdef SetSystemTime  // процедуры нужны для установики системного времени в модуль RTC  в блоке void setup(void)
@@ -508,20 +543,24 @@ void setup(void)
 
         LCD_1602.init();
         LCD_1602.backlight();
-        LCD_1602.LCD_Print("Hello Gl!", -99, "v.0.0.5", -99);
+        LCD_1602.LCDRow1 ="Hello Gl!";
+        LCD_1602.LCDRow2 ="v.0.0.5";
+        LCD_1602.LCD_Print();
 
         if (DS1822_init()) 
             {
-               #ifdef DEBUG 
+               #ifdef DEBUG
                   Serial.println ("Init DC18B20 - OK");
                 #endif
             }
             else 
             {
                 #ifdef DEBUG 
-                  Serial.println ("Init DC18B20 - Error");
-                #endif          
-                LCD_1602.LCD_Print("Error!!!", -99, "Init DC18B20", -99);} // инициируем датчики температуры
+                  Serial.println (errDC18B20);
+                #endif  
+                LCD_1602.LCDRow1 = errDC18B20;        
+                LCD_1602.LCD_Print();
+            } 
 
 
       
@@ -535,14 +574,19 @@ void setup(void)
                     Serial.print("/"); Serial.println(tmYearToCalendar(tm.Year));
                     Serial.print("Время: ");
                     Serial.print(tm.Hour); Serial.print(":"); Serial.print(tm.Minute); Serial.print(":");Serial.println(tm.Second);
+                    Serial.println();
+                    Serial.println();
                 #endif  
             }
             else 
             {
                 #ifdef DEBUG                 
-                    Serial.println ("Ошибка при считывании времени из модуля RTS");
+                    Serial.println (errRTC);
                 #endif                     
-                LCD_1602.LCD_Print("Error!!!", -99, "Init RTS Module", -99);}
+                LCD_1602.LCDRow1 =errRTC;        
+                LCD_1602.LCD_Print();
+                
+                }
 }
 
 void loop(void)
@@ -550,8 +594,17 @@ void loop(void)
    if  (LCD_1602NeedOff == 1)
         {LCD_1602.noBacklight();}   //включаем / выключаем подсветку экрана 
    else if (LCD_1602NeedOff == 0){LCD_1602.backlight();}
-   
 
+
+    // получаем дату/время из RTC модуля и собираем строку даты и времени для LCD дисплея
+     if (RTC.read(tm)) {
+        LCD_1602.LCDRow1 = printDigits(tm.Day) + "." + printDigits(tm.Month) + "." + printDigits(tmYearToCalendar(tm.Year));    
+        LCD_1602.LCDRow1 += " " +printDigits(tm.Hour) + ":"+printDigits(tm.Minute);}
+     else {LCD_1602.LCDRow1 = "Error read RTS";}
+
+
+    //Выводим строки на экран
+    LCD_1602.LCD_Print();
 
   if (DS18_settings.D1_tempCounter == 0xFF) {   //0xFF =255 или  11111111 в бинарном. При каждои привышении граница температуры пишем 1 в новый быит если получаем 0xFF то значит темперетура превышена на протяжении заданного интервала, введено для избежания "дребезга" 
       byte t1 = (DS18_settings.CurrentTemp_D1 - DS18_settings.TargetTemp_D1)*DS18_settings.PWM_StepUP;
