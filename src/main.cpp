@@ -503,8 +503,7 @@ String printDigits(int digits) { // функция превращает числ
 void setup(void)
 {       
     uint32_t day111;
-
-    // tmElements_t tm;
+   
     bool parse=false;
     bool config=false;
 
@@ -514,7 +513,6 @@ void setup(void)
         Serial.println();
         Serial.println();
     #endif
-
 
     day111=RTC.get();  //DS1307RTC Library  ХЗ но без этой строки плата RTC не определяется
                     //Reads the current date & time as a 32 bit "time_t" number. 
@@ -637,11 +635,9 @@ void loop(void)
                 Serial.println (float(t2),2);
             #endif
       analogWrite(portDC18B20PWM_2, t2); // записываем значение ШИМ в порт
-      //digitalWrite(portDC18B20PWM_1, HIGH);
       }  
       else {
-          //digitalWrite(portDC18B20PWM_2, LOW);
-          analogWrite(portDC18B20PWM_2, 00);
+       analogWrite(portDC18B20PWM_2, 00);
    }
 
 }
