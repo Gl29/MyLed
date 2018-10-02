@@ -39,6 +39,8 @@
                         // createChar()	создаёт пользовательский символ для LCD-экрана.
 
 
+#include "MyLCD.h"
+
 
  #define DEBUG                        // Включает общий режим отладки
 
@@ -48,6 +50,7 @@
 // #define DEBUG_DS18_ReadTemp
 // #define DEBUG_DS18_InitConversion
 // #define DEBUG_DS18_SetDS18_resolution
+// #define DEBUG_LCDTest
 #define DEBUG_Loop                      // Включает режим отладки для функции Void LOOP
 #define SetSystemTime                   // Включает режим отладки для функции Void LOOP
 
@@ -71,45 +74,34 @@ const String errDC18B20 = "Error init DC18B20";  // текст ошибки ин
 
 leOS myTask;                        //create a new istance of the class leOS
 
-class MyLCD : public LiquidCrystal_I2C
-{
-  public:
-    String LCDRow1; // перемення в которой записываем верхнюю (1) строку LCD дисплея
-    String LCDRow2; // перемення в которой записываем нижнюю (2) строку LCD дисплея
+// class MyLCD : public LiquidCrystal_I2C
+// {
+//   public:
+//     String LCDRow1; // перемення в которой записываем верхнюю (1) строку LCD дисплея
+//     String LCDRow2; // перемення в которой записываем нижнюю (2) строку LCD дисплея
 
 
-    MyLCD(uint8_t lcd_Addr,uint8_t lcd_cols,uint8_t lcd_rows) : LiquidCrystal_I2C ( lcd_Addr, lcd_cols, lcd_rows)   // MyLCD передается в конструктор с параметром класса FirstClass
-    {}
+//     MyLCD(uint8_t lcd_Addr,uint8_t lcd_cols,uint8_t lcd_rows) : LiquidCrystal_I2C ( lcd_Addr, lcd_cols, lcd_rows)   // MyLCD передается в конструктор с параметром класса FirstClass
+//     {}
  
-    // void LCD_Print(const char Str1[16], const float t1, const char Str2[16], const float t2) // Функция которая выводит на LCD значение температуры
-    // {   // скорее всего данная функция не нужна УДАЛИТЬ
-    //     LiquidCrystal_I2C::backlight();
-    //     LiquidCrystal_I2C::clear();
-    //     LiquidCrystal_I2C::setCursor(0, 0); // Устанавливаем курсор в начало 1 строки
-    //     LiquidCrystal_I2C::printstr(Str1);
-    //     if (t1 != -99) {LiquidCrystal_I2C::print(t1);}
-       
-    //     LiquidCrystal_I2C::setCursor(0, 1);
-    //     LiquidCrystal_I2C::printstr(Str2);
-    //     if (t2 != -99) {LiquidCrystal_I2C::print(t2);}
-    // }
-
-    void LCD_Print() // Функция которая выводит на LCD значение температуры
-    {   
-        LiquidCrystal_I2C::setCursor(0, 0); // Устанавливаем курсор в начало 1 строки
-        LiquidCrystal_I2C::print(LCDRow1);
-        LiquidCrystal_I2C::setCursor(0, 1);
-        LiquidCrystal_I2C::print(LCDRow2);
-        Serial.print ("LCDRow1=");
-        Serial.println (LCDRow1);
-        Serial.print ("LCDRow2=");
-        Serial.println (LCDRow2);
+//     void LCD_Print() // Функция которая выводит на LCD значение температуры
+//     {   
+//         LiquidCrystal_I2C::setCursor(0, 0); // Устанавливаем курсор в начало 1 строки
+//         LiquidCrystal_I2C::print(LCDRow1);
+//         LiquidCrystal_I2C::setCursor(0, 1);
+//         LiquidCrystal_I2C::print(LCDRow2);
      
-    }
+//       #ifdef DEBUG_LCDTest
+//         Serial.print ("LCDRow1=");
+//         Serial.println (LCDRow1);
+//         Serial.print ("LCDRow2=");
+//         Serial.println (LCDRow2);
+//       #endif
+//     }
 
 
 
-};
+// };
 
 MyLCD  LCD_1602(0x27,16,2);           // инициируем экран //int(0x27)
 byte LCD_1602NeedOff=0;               // Флаг необходимости выключить подсветку 

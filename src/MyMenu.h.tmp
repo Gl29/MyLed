@@ -1,0 +1,19 @@
+#include <Arduino.h>
+//#include "MyMenu.cpp"
+#ifndef _MyMenu_H_
+#define _MyMenu_H_
+
+
+
+		// Тип структуры данных описывающих пункт меню
+		typedef struct _MenuItem {
+			String title;			// Имя меню
+			void(*on_click)(int);	// Ссылка на функцию вызова обрабоки изменения значения, параметр +1 или -1)
+			int &param;				// Ссылка на переменную значения
+			char format[16];		// Формат вывода значения переменной
+		} MenuItem;
+
+
+		void ButtonClick(int ButtonId);
+
+#endif 
