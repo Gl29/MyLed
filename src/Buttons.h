@@ -7,7 +7,7 @@
 	class Button 
 	{
 		private:
-			const String ValSTR [5] = {"Right","OK","Left","Cancel"};
+			const String ValSTR [4] = {"Right","OK","Left","Cancel"};
 			int PinNumber;
 			int count;
 			int oldKeyValue;    // Переменная для хранения предыдущего значения состояния кнопок
@@ -17,11 +17,11 @@
 		public:
 			Button(int);
 
-			String PressedKey = "";
+			String KeyPressedTxt = "";
 			int GetKeyValue();
 			int GetButtonNumberByValue(int);
 		//	String KeyRead ();
-			int KeyRead ();			
+			int KeyPressedCode ();			
 	};
 
 #endif

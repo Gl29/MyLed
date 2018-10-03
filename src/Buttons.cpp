@@ -41,18 +41,22 @@ int Button::GetButtonNumberByValue(int value) {   // функция по пре�
   return -1;                              // Значение не принадлежит заданному диапазону
 }
 
+int Button::KeyPressedCode()
+{
+	int newKeyValue = GetKeyValue(); 		// Получаем актуальное состояние кнопок с коррекцией дребезга
 
-int Button::KeyRead(){
-  int newKeyValue = GetKeyValue(); // Получаем актуальное состояние кнопок с коррекцией дребезга
-
-  if (keyValue != newKeyValue) {  // Если новое значение не совпадает со старым - реагируем на него
-    keyValue = newKeyValue;       // Актуализируем переменную хранения состояния
-    if (keyValue > -1) {           // Если значение больше 0, значит кнопка нажата
-      Serial.println("Key pressed: " + String(keyValue));
-      Serial.println("Key pressed: " + ValSTR[keyValue]);
-    // return ValSTR[keyValue];
-	PressedKey = ValSTR[keyValue]+"\0";
-	return keyValue;
-    }
-  }
+	if (keyValue != newKeyValue)
+	{										// Если новое значение не совпадает со старым - реагируем на него
+		keyValue = newKeyValue;				// Актуализируем переменную хранения состояния
+		if (keyValue > -1)
+		{ // Если значение больше -1, значит кнопка нажата
+		#ifdef DEBUG_Butoons
+			Serial.println("Key pressed: " + String(keyValue));
+			Serial.println("Key pressed: " + ValSTR[keyValue]);
+		#endif
+			KeyPressedTxt = ValSTR[keyValue] + "\0";
+			return keyValue;
+		}
+	} 
+	return	-1; 
 }
