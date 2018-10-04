@@ -5,6 +5,9 @@
 #include <TimeLib.h>
 #include <DS1307RTC.h>      //a basic DS1307 library that returns time as a time_t. 
 
+//#include <iarduino_RTC.h>   // подключаем библиотеку для работы с RTC модулем https://lesson.iarduino.ru/page/urok-17-podklyuchenie-rtc-chasy-realnogo-vremeni-s-knopkami/
+
+
 // #include <EEPROM.h>      // Библиотека для работы с EEPROM 
 //#include <leOS.h>           // Шедуллер задач
 #include <LiquidCrystal_I2C.h> //Библиотека I2C для LCD
@@ -27,7 +30,7 @@
                                             //#define INTERVAL2  5*60*1000UL
 #define TimeInterval_DS18D20        10*1000   //15000 //10000 // Время опроса датчиков температуры м.сек
 #define TimeInterval_RTC            10*1000    // периодичность обновления информации о текущем времени м.сек
-#define TimeInterval_LCDBacklight    5*1000    // Время через которое выключается подсветка экрана м.сек
+#define TimeInterval_LCDBacklight   10*1000    // Время через которое выключается подсветка экрана м.сек
 
 #define DC18_MaxGoodTemp            30      // Максимальная температура после превышения которой срабатывает событие (градусы цельсия)
 
@@ -37,6 +40,9 @@
 #define portDC18B20PWM_1 5              // указаываем порт для PWM DC18B20_1  
 #define portDC18B20PWM_2 6              // указаываем порт для PWM DC18B20_2
 #define pordButtonsRead A0              // указаываем порт на котором будем слушать нажатие кнопок
+
+//iarduino_RTC time(RTC_DS1307);          // объявляем переменную time для работы с библиотекой, указывая название модуля RTC_DS1307
+
 
 //leOS myTask;                        //create a new istance of the class leOS
 tmElements_t tm;                    // переменная которая хранит время в формте TimeLib.h 
@@ -60,24 +66,14 @@ uint32_t TimerPrevMillis[4];            //Массив для хранения �
 
 
 
-// void LCD_BackLight_OFF()
-// { 
-//     LCD_1602.NeedOff = true;  // Сработал таймер, пора выключать подсветку.  
-// }
 
-void DS18B20_TempStart () // пробуем измерить температуру и вывести результат на экран (используется в leOS myTask)
-{
- if (DS18_sensorRequest (DS18_OneWare, DS18_settings)) {
-    //        LCD_1602.NeedOff = false; // ставим признак что надо включить подсветку
-    //        myTask.restartTask(LCD_BackLight_OFF); // перезапускаем таймер выключения экрана 
-    //        LCD_1602.LCDRow2 = "t=" + String(DS18_settings.CurrentTemp_D1)  + " / " + String(DS18_settings.CurrentTemp_D2);             // генерируем строку 2 LCD дисплея с данными температуры
-        } 
-};
 
 void DateTimeUpdate() // обновляем текущие дату и время. (используется в leOS myTask)
     {
+
+        
         if (RTC.read(tm)) { 
-                GetSTR_DateTime(tm,CurrentDateTime);
+                GetSTR_DateTime(tm, CurrentDateTime);
                 Errors[0].codeErr=0;}
         else {
                 Errors[0].codeErr=1;} 
@@ -138,20 +134,20 @@ void DateTimeUpdate() // обновляем текущие дату и врем�
 
 
 
-  
-
 
 
 // формируем меню экрана
-    
+int i, t;
+
+char* ptrQ = (char*)" ";
         // стартовый / начальный экран
-        LiquidLine welcome_line1(0, 0, "Hello Gl!");  //LiquidLine (uint8_t column, uint8_t row)
+        LiquidLine welcome_line1(0, 0, "Hello Gl!"); 
         LiquidLine welcome_line2(0, 1, "v.0.0.8");
-        LiquidScreen welcome_screen(welcome_line1, welcome_line2); //№1
-        
-        String q = CurrentDateTime.Date;
-        LiquidLine MParam_1(0, 0, q);
-        LiquidLine MParam_2(0, 1, "NoData");
+        LiquidScreen welcome_screen(welcome_line1, welcome_line2);
+
+
+        LiquidLine MParam_1(0, 0,  CurrentDateTime.ptrCharDate, ptrQ, CurrentDateTime.ptrCharTime); 
+        LiquidLine MParam_2(0, 1  );
         LiquidScreen MainParam(MParam_1,MParam_2); //№2
 
 
@@ -161,11 +157,6 @@ void DateTimeUpdate() // обновляем текущие дату и врем�
         LiquidLine Date_1(0, 0, "SetUp Date");
         LiquidLine Date_2(0, 1, "Date Now");
         LiquidScreen mDate(Date_1,Date_2);
-
-        //LED
-        // LiquidLine LED_1_1(0, 0, LedSettings[0].channelName);
-        // LiquidLine LED_1_2(0, 1, "Brightness=",LedSettings[0].channalBrightness);
-
 
         LiquidLine LED_1_1(0, 0, "Set Channel Brightness");
         LiquidLine LED_1_2(0, 1, "Brightness=");
@@ -181,6 +172,7 @@ void setup(void)
   lcd.init();
   lcd.backlight();
 
+  //time.begin();                         // инициируем RTC модуль
         // LCD_1602.init();
         // LCD_1602.backlight();
         // LCD_1602.LCDRow1 ="Hello Gl!";
@@ -192,13 +184,18 @@ void setup(void)
         menu.init();
       //  LiquidMenu menu(lcd, welcome_screen, some_screen);
         menu.add_screen(welcome_screen);
-       // menu.add_screen(MainParam);        
+        menu.add_screen(MainParam);        
         menu.add_screen(mDate);
         menu.add_screen(mLED_1_Screen);
         
         menu.change_screen(1);
 
     // ------------------------------------------------------------------------------------------------------------------    
+ 
+ 
+ 
+ 
+ 
     uint32_t day111;
 
     #ifdef DEBUG_Setup
@@ -209,16 +206,11 @@ void setup(void)
     #endif
 
 
-
         // настраиваем порты
         pinMode(portDC18B20PWM_1, OUTPUT);
         pinMode(portDC18B20PWM_2, OUTPUT);
         digitalWrite(portDC18B20PWM_1, LOW);
         digitalWrite(portDC18B20PWM_2, LOW);
-
- 
-
-
         
 
        
@@ -285,13 +277,6 @@ void setup(void)
         //        LCD_1602.LCDRow1 = Errors[0].TextErr;  
         //        LCD_1602.LCD_Print();
             }
-        // стартуем задачи
- //       myTask.begin();                                                  // запускаем таймер задач
- //       myTask.addTask(DS18B20_TempStart, DS18D20_TIME_SCAN_frequency); // добавляем задачу опроса температурных датчиков с
-                                                                         //частотой DS18D20_TIME_SCAN_frequency 
-
- //   //    myTask.addTask(LCD_BackLight_OFF, LCD_1602BacklightOffTime);
-//        myTask.addTask(DateTimeUpdate, RTC_TIME_SCAN_frequency);
 
 
 }
@@ -303,23 +288,40 @@ void loop(void)
 {
     unsigned long currentMillis = millis();
     if (currentMillis - TimerPrevMillis[0]>=TimeInterval_RTC)
-        {TimerPrevMillis[0]=currentMillis;
-         DateTimeUpdate();}
+            {TimerPrevMillis[0]=currentMillis;
+             DateTimeUpdate();
+           //  tmpI="BBBBBBB";
+             menu.update();
+             Serial.println(">=TimeInterval_RTC");
+             Serial.print("CurrentDateTime=");
+             Serial.println(CurrentDateTime.Date);
+             Serial.print("CurrentDateTime=");
+             Serial.println(CurrentDateTime.Time);
+            }
         
     if (currentMillis - TimerPrevMillis[1]>=TimeInterval_DS18D20)
-            {TimerPrevMillis[1]=currentMillis;
-            DS18_sensorRequest (DS18_OneWare, DS18_settings);}
+            {
+                if (DS18_sensorRequest (DS18_OneWare, DS18_settings))
+                    {TimerPrevMillis[1]=currentMillis;
+                    menu.update();
+                    Serial.print("TempRead. T1=");
+                    Serial.println(DS18_settings.CurrentTemp_D1);
+                    
+                    Serial.print("TempRead. T2=");
+                    Serial.println(DS18_settings.CurrentTemp_D2);                   
+                    }
+            }
 
     if (currentMillis - TimerPrevMillis[2]>=TimeInterval_DS18D20)
             {TimerPrevMillis[2]=currentMillis;
             lcd.noBacklight();}        
 
 
-    //if(previousMillis > currentMillis){previousMillis = currentMillis;
+
 //    if      (LCD_1602.NeedOff == true)  {LCD_1602.noBacklight();}    //выключаем подсветку экрана 
 //    else if (LCD_1602.NeedOff == false) {LCD_1602.backlight();}      //включаем  подсветку экрана
 
-    // получаем дату/время из RTC модуля и собираем строку даты и времени для LCD дисплея
+
      
 
     
@@ -330,17 +332,12 @@ void loop(void)
     //     case 2: {menu.previous_screen(); Serial.println("Key 2 pressed"); break;}
     //     case 3: {menu.change_screen(1); Serial.println("Key 3 pressed"); break;}
 
-        case 0: {menu.change_screen(1); Serial.println("Key 0 pressed"); break;}
-        case 1: {menu.change_screen(2); Serial.println("Key 1 pressed"); break;}
-        case 2: {menu.change_screen(3); Serial.println("Key 2 pressed"); break;}
-        case 3: {menu.change_screen(4); Serial.println("Key 3 pressed"); break;}
+        case 0: {menu.change_screen(1); Serial.println("Key 0 pressed"); lcd.backlight(); TimerPrevMillis[2]=currentMillis; break;}
+        case 1: {menu.change_screen(2); Serial.println("Key 1 pressed"); lcd.backlight(); TimerPrevMillis[2]=currentMillis; break;}
+        case 2: {menu.change_screen(3); Serial.println("Key 2 pressed"); lcd.backlight(); TimerPrevMillis[2]=currentMillis; break;}
+        case 3: {menu.change_screen(4); Serial.println("Key 3 pressed"); lcd.backlight(); TimerPrevMillis[2]=currentMillis; break;}
 
     };
-
-    // Serial.println(MyButtons.KeyRead());
-    // Serial.println(MyButtons.PressedKey);
-
-
 
 
   if (DS18_settings.D1_tempCounter == 0xFF) {   //0xFF =255 или  11111111 в бинарном. При каждои привышении граница температуры пишем 1 в новый бит если получаем 0xFF то значит темперетура превышена на протяжении заданного интервала, введено для избежания "дребезга" 

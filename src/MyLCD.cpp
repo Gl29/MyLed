@@ -1,6 +1,9 @@
 #include "MyLCD.h"
 #include <LiquidCrystal_I2C.h>
 
+//____________________________________
+// Не используется
+// ____________________________________
 
 
 // class MyLCD : public LiquidCrystal_I2C

@@ -10,6 +10,9 @@ String printDigits(int digits) { // функция превращает числ
 
 void GetSTR_DateTime (tmElements_t &t, CurrDateTimeSTR &CDT) // Возвращаем дату или время в виде текстовой строки
 { 
-   CDT.Time = printDigits(t.Hour) + ":" + printDigits(t.Minute) + "\0";
-   CDT.Date = printDigits(t.Day) + "/" + printDigits(t.Month)  + "/" +  tmYearToCalendar(t.Year) + "\0";     
+   CDT.Time = printDigits(t.Hour) + ":" + printDigits(t.Minute);// + "\0";
+   CDT.Date = printDigits(t.Day) + "/" + printDigits(t.Month)  + "/" +  tmYearToCalendar(t.Year);// + "\0";     
+   CDT.Date.toCharArray(CDT.CharDate,11); 
+   CDT.Time.toCharArray(CDT.CharTime,6);  
+
 }

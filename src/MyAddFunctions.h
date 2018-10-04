@@ -11,6 +11,11 @@ struct Err {
 struct CurrDateTimeSTR {
     String Date;
     String Time;
+    char CharDate[11]; // храним дату в виде массива char
+    char CharTime[6];  // храним время в виде массива char
+    char* ptrCharDate=CharDate; // перемення указатель на массив char
+    char* ptrCharTime=CharTime;
+    
 };
 
 String printDigits(int);

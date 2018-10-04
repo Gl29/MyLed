@@ -2,6 +2,9 @@
 #include "Arduino.h"
 #include <OneWire.h> 
 
+
+
+
 // #define DEBUG_DS18_sensorRequest   // Включает режим отладки для функции DEBUG_DS18_sensorRequest
 // #define DEBUG_DS1822_init
 // #define DEBUG_DS18_ReadTemp
