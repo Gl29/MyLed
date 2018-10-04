@@ -13,15 +13,13 @@
 			int oldKeyValue;    // Переменная для хранения предыдущего значения состояния кнопок
 			int innerKeyValue;
 			int keyValue  =  0;          // Состояние покоя - Ни одна кнопка не нажата
-		
+
+			int GetKeyValue();
+			int GetButtonNumberByValue(int);		
 		public:
 			Button(int);
-
 			String KeyPressedTxt = "";
-			int GetKeyValue();
-			int GetButtonNumberByValue(int);
-		//	String KeyRead ();
-			int KeyPressedCode ();			
+			int8_t KeyPressedCode ();		// возвращает код нажатой кнопки или -1 если кнопка не нажата			
 	};
 
 #endif

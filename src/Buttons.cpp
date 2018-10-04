@@ -3,9 +3,9 @@
 
 Button::Button(int _PinNumber) {PinNumber=_PinNumber;};
 
-int Button::GetKeyValue() {         // Функция устраняющая дребезг
+int Button::GetKeyValue() {								// Функция устраняющая дребезг
 	int t1 = analogRead(PinNumber);
-	int actualKeyValue = GetButtonNumberByValue(t1);  // Преобразовываем его в номер кнопки, тем самым убирая погрешность
+	int actualKeyValue = GetButtonNumberByValue(t1);	// Преобразовываем его в номер кнопки, тем самым убирая погрешность
   
   	#ifdef DEBUG_Butoons
 		Serial.println();Serial.println();
@@ -14,7 +14,7 @@ int Button::GetKeyValue() {         // Функция устраняющая д�
 		Serial.print ("actualKeyValue=");Serial.println (actualKeyValue);
 	#endif
 
-	if (innerKeyValue != actualKeyValue) {  // Пришло значение отличное от предыдущего
+	if (innerKeyValue != actualKeyValue) {  		// Пришло значение отличное от предыдущего
 		count = 0;                            		// Все обнуляем и начинаем считать заново
 		innerKeyValue = actualKeyValue;       		// Запоминаем новое значение
 	}
@@ -41,15 +41,14 @@ int Button::GetButtonNumberByValue(int value) {   // функция по пре�
   return -1;                              // Значение не принадлежит заданному диапазону
 }
 
-int Button::KeyPressedCode()
+int8_t Button::KeyPressedCode()
 {
-	int newKeyValue = GetKeyValue(); 		// Получаем актуальное состояние кнопок с коррекцией дребезга
-
-	if (keyValue != newKeyValue)
-	{										// Если новое значение не совпадает со старым - реагируем на него
+	int8_t newKeyValue = GetKeyValue(); 		// Получаем актуальное состояние кнопок с коррекцией дребезга
+	if (keyValue != newKeyValue)			// Если новое значение не совпадает со старым - реагируем на него
+	{										
 		keyValue = newKeyValue;				// Актуализируем переменную хранения состояния
-		if (keyValue > -1)
-		{ // Если значение больше -1, значит кнопка нажата
+		if (keyValue > -1)					// Если значение больше -1, значит кнопка нажата
+		{ 
 		#ifdef DEBUG_Butoons
 			Serial.println("Key pressed: " + String(keyValue));
 			Serial.println("Key pressed: " + ValSTR[keyValue]);
