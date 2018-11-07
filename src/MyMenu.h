@@ -3,7 +3,7 @@
 
 #include "Arduino.h"
 #include <string.h>
-
+#define DEBUG_MyMenu
 
 
 class MyMENU 
@@ -16,190 +16,58 @@ public:
                                                                 // LEDMenu      - меню LED экранов =1
                                                                 // Param        - меню параметров  =2
             
-
-        enum t_MenuOperationMode {NotEdit,RowSelect,RowEdit};   // NotEdit      - Не редактируем  =0
+        enum t_MenuOperationMode {NotEdit,RowEdit};             // NotEdit      - Не редактируем  =0
                                                                 // RowSelect    - Режим выбора строки =1
                                                                 // RowEdit      - Режим редактированя строки  =2
-    
+        static byte MenuAmount;                                 // статическая переменнуая-член класса, счетчик обьектов класса
+        void (*ptr_on_click)(int8_t) =nullptr;	                            // Указатель на функцию вызова обрабоки изменения значения, параметр +1 или -1)
 
 
 
 
-
-// MyMENU(t_MenuType MenuType, char *Row1, char *Row2,  void(*on_click)(int8_t), int8_t func_param=1)
-// {
-//    // _Menu.LCDNumber=0;
-//    _MenuType =MenuType;
-// //    strcpy(_Row1, Row1);    
-// //    strcpy(_Row2, Row2);    
-//    _Row1=Row1;
-//    _Row2=Row2;
-   
-//    _on_click = on_click;    
-//    _func_param = func_param; 
-
-// }
+MyMENU();
+MyMENU(t_MenuType , char* , void(* on_click)(int8_t), int8_t);
+MyMENU(t_MenuType , char* , char*);
+MyMENU(t_MenuType , char* , const uint8_t*);
+MyMENU(t_MenuType , char* , const uint8_t*, void(* on_click)(int8_t), int8_t);
+MyMENU(t_MenuType , char* , char*, void(*on_click)(int8_t), int8_t);
 
 
 
-MyMENU(t_MenuType MenuType, char *Row1, char *Row2, void(*on_click)(int8_t),int8_t func_param=1):
-         _MenuType(MenuType), _Row1(Row1), _Row2(Row2), _on_click(on_click), _func_param(func_param)
-{
-//    // _Menu.LCDNumber=0;
-//    _MenuType =MenuType;
-// //    strcpy(_Row1, Row1);    
-// //    strcpy(_Row2, Row2);    
-//    _Row1=Row1;
-//    _Row2=Row2;
-   
+#ifdef DEBUG_MyMenu
+    void DebugPrint()
+    {
+        char str[80];
+        
+        Serial.print(_MenuType);   Serial.print(", "); 
+        Serial.print(_ptr_Row1);       Serial.print(", "); 
+        Serial.print(_ptr_Row2);       Serial.print(", "); 
+        
+        sprintf (str, "%p", ptr_on_click); // печатаем адрес функции  
+        Serial.print ("sprintf: ptr_on_click: ");
+        Serial.print(str); Serial.print(", ");
+        Serial.println(_func_param);
 
-}
-
-
-
-void DebugPrint()
-{
-    Serial.print(_MenuType);   Serial.print(", "); 
-    Serial.print(_Row1);       Serial.print(", "); 
-    Serial.print(_Row2);       Serial.print(", "); 
-
-    Serial.println(_func_param);
-
-}
-
-void UpdateRow (byte RowNumb,   char *Row1,  float *param1,  char *Row2,  float *param2)
-// добавляем 2 строки char[] RowNumb на экран (Float)
-{   
-    char chrTMP_1[16]= {'\0'};  // в этот массив собираем итоговую строку
-    char chrTMP[4];             //этот для преобразрвания float в char
-
-    dtostrf(*param1, 4, 1, chrTMP); // преобразуем  param1 (float) в char
-    strcat(chrTMP_1, Row1); 
-    strcat(chrTMP_1, chrTMP);    
-
-    dtostrf(*param2, 4, 1, chrTMP); // преобразуем  param1 в char
-    strcat(chrTMP_1, Row2);   
-    strcat(chrTMP_1, chrTMP); 
-
-    if (strlen(chrTMP_1)<16){
-         while (strlen(chrTMP_1)<16){strcat(chrTMP_1, " \0");} // "Добиваем" строчку  cпробелами
     }
+#endif
 
-    if(RowNumb ==1){strcpy(_Row1, chrTMP_1);}
-    else {strcpy(_Row2, chrTMP_1);}
+void SetMenuType (t_MenuType);
 
- 
+void UpdateRow2_Value();                            //функция берет значение из указателя на внешний параметр (_ptr_Row2_ParamValue) и превращает его в строку экрана _Row2
+void UpdateRow (byte, char *,  float *,  char *,  float *);
+void UpdateRow (byte, const char *);
+void UpdateRow (byte, const char *, const uint8_t *);
 
-}
+char *GetRow (byte);
+t_MenuType GetMenuType ();
 
-
-// void UpdateRow (byte RowNumb, const char *Row, const uint8_t *RowParamValue)
-// // добавляем строку char[] RowNumb на экран (uint_8)
-// {   
-//     // Serial.print("*param1=");
-//     // Serial.println(*param1);
-//     char chrTMP[2];
-//     sprintf(chrTMP, "%d", *RowParamValue);
-
-//     char chrTMP_1[16]= {'\0'};  // в этот массив собираем итоговую строку
-//     strcat(chrTMP_1, Row); 
-//     strcat(chrTMP_1, "="); 
-//     strcat(chrTMP_1,  chrTMP);    
-
-//     if (strlen(chrTMP_1)<16){
-//         while (strlen(chrTMP_1)<16){strcat(chrTMP_1, " \0");} // "Добиваем" строчку  пробелами
-//     }
-//     if(RowNumb ==1) {strcpy(_Row1, chrTMP_1);}
-//     else            {strcpy(_Row2, chrTMP_1);}
-// }
-
-
-
-
-void UpdateRow (byte RowNumb, const char *Row)
-// добавляем строку char[] RowNumb на экран (uint_8)
-{   
-    Serial.println();
-    Serial.println("------Func UpdateRow____Start");
-    Serial.print("*RowNumb=");
-    Serial.println(RowNumb);
-
-    Serial.print("*Row=");
-    Serial.println(*Row);
-
-    Serial.print("Row=");
-    Serial.println(Row);
-
-    Serial.print("_Row1=");
-    Serial.println(_Row1);
-    Serial.print("_Row2=");
-    Serial.println(_Row2);
-
-
-
-    char chrTMP_1[16]= {'\0'};  // в этот массив собираем итоговую строку
-    Serial.print("chrTMP_1[16]=");
-    Serial.println(chrTMP_1);   
-    strcat(chrTMP_1, Row); 
-
-    Serial.print("strcat(chrTMP_1, Row)=");
-    Serial.println(chrTMP_1);   
-    
-
-   
-    if (strlen(chrTMP_1)<16){
-        while (strlen(chrTMP_1)<16){strcat(chrTMP_1, " \0");} // "Добиваем" строчку  пробелами
-    }
-
-    Serial.print("strlen(chrTMP_1)<16...=");
-    Serial.println(chrTMP_1);  
-
-    if(RowNumb ==1) {strcpy(_Row1, chrTMP_1);}
-    else            {strcpy(_Row2, chrTMP_1);}
-
-    Serial.println();
-    Serial.println(chrTMP_1);
-    Serial.println();
-    Serial.println("------Func UpdateRow____End");
-    Serial.println();
-    
-}
-
-
-
-
-
-
-
-char *GetRow (byte RowNumber) //char* GetRow (byte RowNumber)
-// возвращаем указанную строку (массив char)
-{ 
-    if (RowNumber==1){return _Row1;}
-    else {return _Row2;}
-}
-    
-t_MenuType GetMenuType ()
-// возвращаем тип меню
-{ 
-    return _MenuType;
-}    
-
-void SetMenuType (t_MenuType _MenuType)
-// задаём тип меню
-{ 
-   _MenuType= _MenuType;
-}  
 
 private:
         t_MenuType       _MenuType;
-        char            *_Row1;
-        char            *_Row2;
-	    void      (*_on_click)(int8_t);	    // Ссылка на функцию вызова обрабоки изменения значения, параметр +1 или -1)
-	    int8_t           _func_param ;			    // Указатель на переменную значения
+        char             _Row2[17];                 // вторую строку экрана храним в переменных класса
+        char            *_ptr_Row1=nullptr;         // указатель на 1ю строку меню меню экземпляра данного класса
+        char            *_ptr_Row2=_Row2;           // указатель на 2ю строку меню экземпляра данного класса 
+        const uint8_t   *_ptr_Row2_ParamValue;      // указатель на переменную / значение параметра хранится вне каласса (например яркость экрана или время итд)
+	          int8_t     _func_param ;		        // Переменную значения которое передатся в функцию  void (*ptr_on_click)(int8_t)
 };
-
-
-
-
-
 #endif

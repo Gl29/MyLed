@@ -27,6 +27,7 @@
 #define SetSystemTime           // Включает режим установки системного времени
 //#define Debug_SetSystemTime     // Включает режим отладки в момент установки системного времени
 #define DEBUG_Func_buttons_control
+#define DEBUG_MyMenu
 
 //-------- Стартовые параметры -----------------------------------------------------------------------
 #define SERIAL_BAUD 115200 //9600 //57600 //
@@ -64,16 +65,12 @@ uint32_t TimerPrevMillis[5];                // Массив для хранен�
                                             // 4 - Обновление LCD экрана/ов
                         
 
-uint8_t activeScreenRowNumber   = 1;        // Количество и типы экранов: 
-                                            // Десятки - номер активного экрана, единицы - номер активной строки 
-                                            // 01   - Время/дата 
-                                            // 02   - Темперетура  
-                                            // 11   - Яркость LED линии 1
-                                            // 12   - Яркость LED линии 2
-                                            // 21   - Яркость LED линий 3
-                                            // 22   - Яркость LED линий 4
-                                            // 31   - Яркость LED линий 5
-                                            
+uint8_t activeScreenNumber   = 0;        // Номер активного экрана: 
+                                            // 0   - Время/дата //Темперетура 
+                                            // 1   - Яркость LED линии 1
+                                            // 2   - Яркость LED линии 2
+                                            // ........
+
 
 uint8_t dateTimeSetMode        = 1;        // Переменная хранит режим установки времени: 
                                             // 0-нет 1-нет (секунды сбрасываем автоматом) 
@@ -81,70 +78,47 @@ uint8_t dateTimeSetMode        = 1;        // Переменная хранит 
                                             // 8-11 - 
 
  //MyMENU  Menu[numbLEDChannel+1];
- //MyMENU::t_MenuOperationMode CurrOperationMode;
-int tmpI =0;
+ MyMENU::t_MenuOperationMode CurrOperationMode=MyMENU::NotEdit;
+//int tmpI =0;
 
-const void setDateTime(int8_t i){tmpI++;};
-const void setLedBright(int8_t i){tmpI++;};
-const void setParam(int8_t i){tmpI++;};
+
 
 
 LedChannel LedSettings [5] =                                 // структура для зранетия параметров LED каналов
         {
-            {"ColdWhite_1",  0, LedChannel::BlinkOff, 11},  // название, яркость, признак мигания, номер меню (Экрана) + номер строки на котором отображается
+            {"ColdWhite_1", 20, LedChannel::BlinkOff, 11},  // название, яркость, признак мигания, номер меню (Экрана) + номер строки на котором отображается
             {"ColdWhite_2", 30, LedChannel::BlinkOff, 12},
             {"WarmWhite_1", 30, LedChannel::BlinkOff, 21},
             {"Red",         30, LedChannel::BlinkOff, 22},
             {"Blue",        30, LedChannel::BlinkOff, 31}
         };
 
+ void setDateTime(int8_t i){
+     //tmpI++;
+     };
+ void setLedBright(int8_t increment)
+    {
+            // !!!!!! activeScreenNumber-1 будет работать только при условии что параметры лед каналов будут начинаться со второго єкрана
+            // по хорошему в функцию также надо перадавать номер канала по кторому мы хотим поменять яркость
+            LedSettings[activeScreenNumber-1].channelBrightness += increment;};
+ 
+ void setParam(int8_t i){
+     //tmpI++;
+     };
 
-// MyMENU Menu[] = {                                           // структура для хранения меню
-//     { MyMENU::MainMenu  , "", "", setDateTime, 100},
-//     { MyMENU::LEDMenu   , LedSettings[0].channelName, "", setLedChennalBright},
-//     { MyMENU::LEDMenu   , LedSettings[1].channelName, "", setLedChennalBright},   
-//     { MyMENU::LEDMenu   , LedSettings[2].channelName, "", setLedChennalBright},    
-//     { MyMENU::LEDMenu   , LedSettings[3].channelName, "", setLedChennalBright},
-//     { MyMENU::LEDMenu   , LedSettings[4].channelName, "", setLedChennalBright},        
-//     { MyMENU::ParamMenu , "Param_1", "Param_2", setParam},        
-// };
-char DateTime[17]     ="________________";
-char Temperature[17]  ="________________";
 
-MyMENU Menu[] = {                                           // структура для хранения меню
-    { MyMENU::MainMenu,     DateTime,        Temperature,   setDateTime},
-    { MyMENU::LEDMenu,      LedSettings[0].channelName, "_______",   setLedBright},
-    { MyMENU::LEDMenu,      LedSettings[1].channelName, "_______",   setLedBright},   
-    { MyMENU::LEDMenu,      LedSettings[2].channelName, "_______",   setLedBright},    
-    { MyMENU::LEDMenu,      LedSettings[3].channelName, "___________",   setLedBright},
-    { MyMENU::LEDMenu,      LedSettings[4].channelName, "_____________",   setLedBright},        
-    { MyMENU::ParamMenu,    "Param_1",                  "____",   setParam},        
+char DateTime[17]     ="________________";      // переменная необходима для хранения первой строки меню (в классе только указатель на эту строку)  
+byte MyMENU::MenuAmount=0;                      // инициация счётчика количества членов класса MyMENU
+
+MyMENU Menu[] = {                                           // массив для хранения строк меню, каждая строка - 1 экран
+    { MyMENU::MainMenu, DateTime, setDateTime,1},
+    { MyMENU::LEDMenu,  LedSettings[0].channelName, LedSettings[0].ptr_channelBrightness, setLedBright, 1}, 
+    { MyMENU::LEDMenu,  LedSettings[1].channelName, LedSettings[1].ptr_channelBrightness, setLedBright, 1},   
+    { MyMENU::LEDMenu,  LedSettings[2].channelName, LedSettings[2].ptr_channelBrightness, setLedBright, 1},    
+    { MyMENU::LEDMenu,  LedSettings[3].channelName, LedSettings[3].ptr_channelBrightness, setLedBright, 1},
+    { MyMENU::LEDMenu,  LedSettings[4].channelName, LedSettings[4].ptr_channelBrightness, setLedBright, 1},        
+    { MyMENU::ParamMenu,    "Param_1",  "____", setParam,   1},        
 };
-
-
-// MyMENU Menu[] = {                                           // структура для хранения меню
-//     { MyMENU::MainMenu,     "Date",                     "D1"},
-//     { MyMENU::LEDMenu,      LedSettings[0].channelName, "D2"},
-//     { MyMENU::LEDMenu,      LedSettings[1].channelName, "D3"},   
-//     { MyMENU::LEDMenu,      LedSettings[2].channelName, "D4"},    
-//     { MyMENU::LEDMenu,      LedSettings[3].channelName, "D5"},
-//     { MyMENU::LEDMenu,      LedSettings[4].channelName, "D6"},        
-//     { MyMENU::ParamMenu,    "Param_1",                  "D7"},        
-// };
-
-// MyMENU Menu[] = {                                           // структура для хранения меню
-//     { 0,     "_________________",    "22222222222222222"},
-//     { 1,     "1111111111111111",    "22222222222222222"},
-//     { 1,     "1111111111111111",    "22222222222222222"},   
-//     { 1,     "1111111111111111",    "22222222222222222"},    
-//     { 1,     "1111111111111111",    "22222222222222222"},
-//     { 1,     "1111111111111111",    "22222222222222222"},        
-//     { 2,     "1111111111111111",    "22222222222222222"},        
-// };
-
-
-
-
 
 
 #ifdef SetSystemTime  // процедура нужна для установики системного времени в модуль RTC  в блоке void setup(void)
@@ -239,13 +213,12 @@ void setup(void)
                 //Errors[1].codeErr=1;
             } 
 
-// Menu[0].DebugPrint();
-// Menu[1].DebugPrint();
-// Menu[2].DebugPrint();
-// Menu[3].DebugPrint();
-// Menu[4].DebugPrint();
-// Menu[5].DebugPrint();
-// Menu[6].DebugPrint();
+
+
+
+for (int8_t i =0; i< MyMENU::MenuAmount;i++)
+   {Menu[i].DebugPrint();}
+
 }
 
 
@@ -256,30 +229,23 @@ void loop(void)
 {
     unsigned long currentMillis = millis();
 
-    // обновляем  актуальный (activeScreenRowNumber) lcd экран
+    // обновляем  актуальный (activeScreenNumber) lcd экран
       if (currentMillis - TimerPrevMillis[4] >= TimeInterval_LCDUpdate)
     {
+
         TimerPrevMillis[4] = currentMillis;
+        lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print(Menu[activeScreenRowNumber/10].GetRow(1));
+        lcd.print(Menu[activeScreenNumber].GetRow(1));
         lcd.setCursor(0, 1);
-        lcd.print(Menu[activeScreenRowNumber/10].GetRow(2));
+        lcd.print(Menu[activeScreenNumber].GetRow(2));
 
         // Serial.println();
-        //    Serial.print ("Menu[activeScreenRowNumber/10].GetRow(1)=") ;      
-        //    Serial.println (Menu[activeScreenRowNumber/10].GetRow(1)) ; 
+        //    Serial.print ("Menu[activeScreenNumber].GetRow(1)=") ;      
+        //    Serial.println (Menu[activeScreenNumber].GetRow(1)) ; 
         //    Serial.println(); Serial.println();
-        //    Serial.print ("Menu[activeScreenRowNumber/10].GetRow(2)=") ;      
-        //    Serial.println (Menu[activeScreenRowNumber/10].GetRow(2)) ;      
-
-
-        Menu[0].DebugPrint();
-        Menu[1].DebugPrint();
-        Menu[2].DebugPrint();
-        Menu[3].DebugPrint();
-        Menu[4].DebugPrint();
-        Menu[5].DebugPrint();
-        Menu[6].DebugPrint();
+        //    Serial.print ("Menu[activeScreenNumber].GetRow(2)=") ;      
+        //    Serial.println (Menu[activeScreenNumber].GetRow(2)) ;      
 
     }
 
@@ -303,11 +269,8 @@ void loop(void)
         if (DS18_sensorRequest(DS18_OneWare, DS18_settings))
         {
             TimerPrevMillis[1] = currentMillis;
-            //Menu[0].addRow(2,DS18_settings.CurrTempD1D2Char);   
-            //Serial.println ("Call Menu[0].addRow(2,'t111='");
-            Menu[0].UpdateRow(2, "t1=", &DS18_settings.CurrentTemp_D1,"  t2=",  &DS18_settings.CurrentTemp_D2);  //&DS18_settings.CurrentTemp_D2 - передаём адрес переменной       
+            Menu[0].UpdateRow(2, "t1=", &DS18_settings.CurrentTemp_D1,"  t2=",  &DS18_settings.CurrentTemp_D2);      
 
- 
         #ifdef DEBUG_DS18B20
                     Serial.print("TempRead. T1=");
                     Serial.println(DS18_settings.CurrentTemp_D1);
@@ -330,23 +293,85 @@ void loop(void)
 
 
     int8_t k = MyButtons.KeyPressedCode();    
-    if (k!=-1) {Serial.print(F("MyButtons.KeyPressedCode()="));
-                Serial.println(k);}
+    // if (k!=-1) {Serial.print(F("MyButtons.KeyPressedCode()="));
+    //             Serial.println(k);}
     
     switch (k) 
-     { Serial.println("switch (k)");
-        case 0: {//menu.change_screen(1); 
-                    Serial.println("Key 0 pressed");break;}// lcd.backlight(); TimerPrevMillis[2]=currentMillis; break;}
-        case 1: {//menu.change_screen(2); 
-                    Serial.println("Key 1 pressed");break;}//; lcd.backlight(); TimerPrevMillis[2]=currentMillis; break;}
-        case 2: {//menu.change_screen(3); 
-                    Serial.println("Key 2 pressed");break;}//; lcd.backlight(); TimerPrevMillis[2]=currentMillis; break;}
-        case 3: {//menu.change_screen(4); 
-                    Serial.println("Key 3 pressed");break;}//; lcd.backlight(); TimerPrevMillis[2]=currentMillis; break;}
+    { Serial.println("switch (k)");
+        case 0: {                                                                           // Нажата кнопка -> / Вперед 
+                    Serial.println("Key 0 pressed");
+                    if (CurrOperationMode==MyMENU::NotEdit)                                 // если мы НЕ находимся в режиме редактирования 
+                        {
+                            Serial.print("activeScreenNumber_Before=");
+                            Serial.println(activeScreenNumber);
+                            activeScreenNumber= activeScreenNumber+1>=MyMENU::MenuAmount?0:activeScreenNumber+1;
+                            Serial.print("activeScreenNumber_After=");
+                            Serial.println(activeScreenNumber);
+                        }
+
+                    else if(CurrOperationMode==MyMENU::RowEdit)                                                                 // если мы находимся в режиме редактирования ()
+                    {
+                        Serial.println (LedSettings[activeScreenNumber-1].channelBrightness);
+                        Menu[activeScreenNumber].ptr_on_click(1);
+                        Menu[activeScreenNumber].UpdateRow2_Value();
+                        Serial.println (LedSettings[activeScreenNumber-1].channelBrightness);
+                                                // (*Menu[1].on_click())(1);
+                    }    
+                    // lcd.backlight(); TimerPrevMillis[2]=currentMillis;
+                    break;
+                } 
+
+        case 2: {                                                                           // Нажата кнопка <- /Назад
+                    Serial.println("Key 2 pressed");
+                    if (CurrOperationMode==MyMENU::NotEdit)                                 // если мы не находимя в режиме редактирования 
+                        {   
+                            Serial.print("activeScreenNumber_Before=");
+                            Serial.println(activeScreenNumber);
+                            activeScreenNumber= activeScreenNumber-1<0?MyMENU::MenuAmount-1:activeScreenNumber-1;
+                            Serial.print("activeScreenNumber_After=");
+                            Serial.println(activeScreenNumber);
+                            } // текущее меню -1
+                    else {
+                        
+                    };    
+
+                    // lcd.backlight(); TimerPrevMillis[2]=currentMillis;
+                    break;}
+
+
+
+        case 1: {                                                                        // Нажата кнопка  ^ / Вверх / Select
+                    Serial.println("Key 1 pressed");
+
+                    if (CurrOperationMode!=MyMENU::RowEdit)                              // если мы не находимя в режиме редактирования строки, то переключаемся в режим редактирования
+                    {
+                    CurrOperationMode = static_cast<MyMENU::t_MenuOperationMode>(static_cast<int>(CurrOperationMode)+1);
+                        Serial.print ("CurrOperationMode'+1'=");
+                        Serial.print (CurrOperationMode);
+                                              
+                    
+                    }
+                    break;}//; lcd.backlight(); TimerPrevMillis[2]=currentMillis; break;}
+        
+        case 3: {// Нажата кнопка "вниз"/Сancel 
+                    Serial.println("Key 3 pressed");
+                    if (CurrOperationMode==MyMENU::NotEdit)                                 // если мы не находимся в режиме редактирования 
+                        {activeScreenNumber=0;}                                          //Возврат в главное меню (Дата и температура)
+                    
+                    else                                                                    // иначе Понижаем уровень редактирования
+                     {CurrOperationMode = static_cast<MyMENU::t_MenuOperationMode>(static_cast<int>(CurrOperationMode)-1);
+                        Serial.print ("CurrOperationMode'-1'=");
+                        Serial.print (CurrOperationMode);
+                     }                                
+                    //; lcd.backlight(); TimerPrevMillis[2]=currentMillis;
+                    break;
+                }
+
+
+        
+        
 
     };
- //   if(k !=-1){Func_buttons_control(k,currentMillis);}  
-
 
   if (DS18_settings.D1_tempCounter == 0xFF) {   //0xFF =255 или  11111111 в бинарном. При каждои привышении граница температуры пишем 1 в новый бит если получаем 0xFF то значит темперетура превышена на протяжении заданного интервала, введено для избежания "дребезга" 
         DS18_settings.PWM_D1_Level = (DS18_settings.CurrentTemp_D1 - DS18_settings.TargetTemp_D1)*DS18_settings.PWM_StepUP;
