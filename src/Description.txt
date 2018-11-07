@@ -1,4 +1,4 @@
- int8_t		|	char			          |	от -128 до 127
+int8_t		|	char			          |	от -128 до 127
 uint8_t		|	byte, unsigned char	|	от 0 до 255
 int16_t		|	int			            |	от -32768 до 32767
 uint16_t	|	unsigned int, word	|	от 0 до 65535 

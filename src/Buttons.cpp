@@ -53,7 +53,7 @@ int8_t Button::KeyPressedCode()
 			Serial.println("Key pressed: " + String(keyValue));
 			Serial.println("Key pressed: " + ValSTR[keyValue]);
 		#endif
-			KeyPressedTxt = ValSTR[keyValue] + "\0";
+		//	KeyPressedTxt = ValSTR[keyValue] + "\0";
 			return keyValue;
 		}
 	} 

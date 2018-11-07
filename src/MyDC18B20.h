@@ -14,13 +14,14 @@
 
 struct struct_DS18_setting           // Структура для ведения параметров датчиков температуры и сохранения данных в eeprom
   {
-		byte D1_tempCounter;             // байт в котором буем вести историю изменения температуры, если все биты =1  значит пора включать вентилятор
-		byte D2_tempCounter;             //!!! потом надо перевести на INT + DS18_divider                                     
-		float CurrentTemp_D1;           // тут храним значение последней считанной с датчиков температуры  
+		byte D1_tempCounter;			// байт в котором буем вести историю изменения температуры, если все биты =1  значит пора включать вентилятор
+		byte D2_tempCounter;			//!!! потом надо перевести на INT + DS18_divider                                     
+		float CurrentTemp_D1;			// тут храним значение последней считанной с датчиков температуры  
 		float CurrentTemp_D2;            
+		//char CurrTempD1D2Char [16];		// char строка с актуальными данными температуры? работает но отключил за ненадобностью 
 		byte TargetTemp_D1; // = DC18_MaxGoodTemp;        // тут храним значение максимально допустимой температуры после которой начинаем включать вентилятор
 		byte TargetTemp_D2; // = DC18_MaxGoodTemp;            
-		bool D1_Start;                // флаги. если = истина - пора включать вентилятор
+		bool D1_Start;					// флаги. если = истина - пора включать вентилятор
 		bool D2_Start;
 		byte PWM_StepUP = 35; 	// переменная хранит шаг роста ШИМ в зависимости от разницы целевой и фактической температуры
 		byte PWM_D1_Level=0;  	// уровень PWM (ШИМ) для датчика 1
@@ -33,13 +34,16 @@ struct struct_DS18_setting           // Структура для ведения
 		uint32_t DS18_divider = 10 ^ 4;      // Делитель. UNO лучше работать с целыми числами поэтому температуру храним как целое число * DS18_divider ....
 		byte readstage =0;              // переменная для процедуры DS18_sensorRequest. Если = 0 стартует конверсия (команда на считывание), если =1 - получаем температуру
 		byte Sensors_addr[2][8];        // Массив. Хранит адреса датчиков. Каждое устройства типа 1-Wire обладает уникальным 64-битным ROM-адресом, который состоит из 8-битного кода, обозначающего семейство, 48-битного серийного кода и 8-битного CRC.
-		byte *pAdr;                     // указатель на первый элемент массива с адресом / адресами датчиков
-		unsigned long last_Call_Time=0;	// Время последнего опроса датчиков
-		//String 
+		byte *ptr_Adr;                     // указатель на первый элемент массива с адресом / адресами датчиков
+		//unsigned long last_Call_Time=0;	// Время последнего опроса датчиков
+		 
   };
 
 
-bool DS18_SetResolution(OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings, byte SensorAdress[8]);
-bool DS1822_init (OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings);
-float DS18_ReadTemp(OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings, byte SensorAdress[8]);
-boolean DS18_sensorRequest (OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings);
+
+
+bool	DS18_SetResolution(OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings, byte SensorAdress[8]);
+bool	DS1822_init (OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings);
+float	DS18_ReadTemp(OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings, byte SensorAdress[8]);
+boolean	DS18_sensorRequest (OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings);
+void 	DS18_TempToChar (struct_DS18_setting &CurrDsSettings);

@@ -1,11 +1,41 @@
 #include "MyDC18B20.h"
 #include <OneWire.h> 
-#include <TimeLib.h>
+//#include <TimeLib.h>
+
+// // отключил в рамках замены процедурок сборки текстовой строки в модуле 
+// // MyMENU void addRow (byte RowNumb, const char *Row1, float param1, const char *Row2, float param2) 
+// void DS18_TempToChar(struct_DS18_setting &CurrDsSettings)
+// {
+
+//     // Serial.print("CurrDsSettings.CurrentTemp_D1=");
+//     // Serial.println(CurrDsSettings.CurrentTemp_D1);
+//     char t[16];
+//     char t1[4];
+//     strcpy(t, "t1=");
+//     // Serial.print("strcpy(t, t1=). =  ");
+//     // Serial.println(t);
+
+
+//     dtostrf(CurrDsSettings.CurrentTemp_D1,4, 1, t1);
+
+//     // Serial.print("dtostrf(CurrDsSettings.CurrentTemp_D1,4, 1, t1)=");
+//     // Serial.println(t1);
+
+//     strcat(t, t1);
+//     strcat(t, "  t2=");
+//     dtostrf(CurrDsSettings.CurrentTemp_D2,4, 1, t1);
+//     strcat(t, t1);
+   
+//     strcpy(CurrDsSettings.CurrTempD1D2Char, t);
+// }
+
+
+
 
 bool DS18_SetResolution(OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings, byte SensorAdress[8])
 { // Функция задаёт параметры точности датчика
 
-	byte DS18_Sensors_tmp_addr[8];
+	//byte DS18_Sensors_tmp_addr[8];
 
     #ifdef  MyDEBUG_DS18_SetDS18_resolution 
          Serial.println("Func DS18_SetDS18_resolution start: ");
@@ -70,7 +100,7 @@ bool DS1822_init (OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings)
          Serial.println("Func DS1822_init start: ");
     #endif
 
-    CurrDsSettings.last_Call_Time = now();   // Время инициализации датчиков = текущему  //DS18_last_Call_Time
+    //CurrDsSettings.last_Call_Time = now();   // Время инициализации датчиков = текущему  //DS18_last_Call_Time
     byte DS18_Sensors_tmp_addr[8]; // Массив в который DS18_OneWare.search(DS18_Sensors_addr) будет записывать адрес найденного датчика
     byte tCount = 0;
     while (DS18_OneWare.search(DS18_Sensors_tmp_addr))
@@ -88,7 +118,7 @@ bool DS1822_init (OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings)
         tCount++;
     }
    // DS18_pAdr = &DS18_Sensors_addr[0][0]; // создаём указатель на первый элемент массива
-   CurrDsSettings.pAdr = &CurrDsSettings.Sensors_addr[0][0]; // создаём указатель на первый элемент массива
+   CurrDsSettings.ptr_Adr = &CurrDsSettings.Sensors_addr[0][0]; // создаём указатель на первый элемент массива
 
     #ifdef  DEBUG_DS1822_init
         for (int k = 0; k < 2; k++)
@@ -106,14 +136,15 @@ bool DS1822_init (OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings)
 
 }
 
-float DS18_ReadTemp(OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings, byte SensorAdress[8])
-{ // Функция определяет тип подключённого датчика с уникальным ID который указан по адресу DS18_Sensors_addr и получает от него температуру
+float DS18_ReadTemp( OneWire &DS18_OneWare,   struct_DS18_setting &CurrDsSettings,   byte SensorAdress[8])
+   // Функция определяет тип подключённого датчика с уникальным ID который указан по адресу DS18_Sensors_addr 
+{  // и получает от него температуру
     #ifdef  DEBUG_DS18_ReadTemp
          Serial.println("Func DS18_ReadTemp start: ");
     #endif
 
 
-    byte present = 0; 
+    //byte present = 0; 
     int i;
     byte data[12];
     byte type_s;
@@ -135,12 +166,16 @@ float DS18_ReadTemp(OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings, 
         type_s = 0;
         break;
     default:
+        break;
+     #ifdef  DEBUG_DS18_ReadTemp
         Serial.println(F("Error. Device is not a DS18x20 family device."));
         Serial.print(F("DS18_Sensors_addr[0] = "));
         Serial.println(SensorAdress[0], HEX);
+     #endif   
     }
 
-    present = DS18_OneWare.reset();
+    //present = DS18_OneWare.reset();
+    DS18_OneWare.reset();
     DS18_OneWare.select(SensorAdress);
     DS18_OneWare.write(0xBE); // Read Scratchpad
 
@@ -206,6 +241,7 @@ float DS18_ReadTemp(OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings, 
 
 
 boolean DS18_sensorRequest (OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings)
+   // именно эта функция инициирует получение температуры
 { // Функция даёт датчикам команду на считывание температуры и на ёё преобразование
     #ifdef  DEBUG_DS18_sensorRequest 
          Serial.println("Func DS18_sensorRequest: ");
@@ -218,7 +254,7 @@ boolean DS18_sensorRequest (OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSe
             Serial.println("Call 'ConvertCommand' ...");
         #endif
 
-        DS18_InitConversion(DS18_OneWare, CurrDsSettings.pAdr); //DS18_pAdr);
+        DS18_InitConversion(DS18_OneWare, CurrDsSettings.ptr_Adr); //DS18_pAdr);
         CurrDsSettings.readstage++;
 		return false;
         }
@@ -234,12 +270,14 @@ boolean DS18_sensorRequest (OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSe
 
         if (DS18_OneWare.read()) // если OneWare находится в статусе read (показания температуры сконвертированы и доступны для чтения)
         {   
-            // DS18_settings.CurrentTemp_D1 = DS18_ReadTemp(DS18_OneWare, DS18_settings.pAdr) / DS18_settings.DS18_divider; //DS18_pAdr
-            // DS18_settings.CurrentTemp_D2 = DS18_ReadTemp(DS18_OneWare, (DS18_settings.pAdr+8)) / DS18_settings.DS18_divider; //DS18_pAdr
+            // DS18_settings.CurrentTemp_D1 = DS18_ReadTemp(DS18_OneWare, DS18_settings.ptr_Adr) / DS18_settings.DS18_divider; //DS18_ptr_Adr
+            // DS18_settings.CurrentTemp_D2 = DS18_ReadTemp(DS18_OneWare, (DS18_settings.ptr_Adr+8)) / DS18_settings.DS18_divider; //DS18_ptr_Adr
 
-            CurrDsSettings.CurrentTemp_D1 = DS18_ReadTemp(DS18_OneWare, CurrDsSettings, CurrDsSettings.pAdr) / CurrDsSettings.DS18_divider; //DS18_pAdr
-            CurrDsSettings.CurrentTemp_D2 = DS18_ReadTemp(DS18_OneWare, CurrDsSettings, (CurrDsSettings.pAdr+8)) / CurrDsSettings.DS18_divider; //DS18_pAdr
-                         
+            CurrDsSettings.CurrentTemp_D1 = DS18_ReadTemp(DS18_OneWare, CurrDsSettings, CurrDsSettings.ptr_Adr) / CurrDsSettings.DS18_divider; //DS18_pAdr
+            CurrDsSettings.CurrentTemp_D2 = DS18_ReadTemp(DS18_OneWare, CurrDsSettings, (CurrDsSettings.ptr_Adr+8)) / CurrDsSettings.DS18_divider; //DS18_pAdr
+            
+            
+            //DS18_TempToChar(CurrDsSettings); // создаём char строку в struct_DS18_setting.CurrTempD1D2Char[16]            
 
 
             if (CurrDsSettings.CurrentTemp_D1 > CurrDsSettings.TargetTemp_D1) {
@@ -270,7 +308,7 @@ boolean DS18_sensorRequest (OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSe
             #endif
 
             CurrDsSettings.readstage = 0;
-            CurrDsSettings.last_Call_Time = now(); // сбрасываем счётчик времени опроса таймера //DS18_last_Call_Time
+            //CurrDsSettings.last_Call_Time = now(); // сбрасываем счётчик времени опроса таймера //DS18_last_Call_Time
 
    
 		return true;
