@@ -34,7 +34,9 @@
                                             //#define INTERVAL2  5*60*1000UL
 #define TimeInterval_DS18D20        10*1000 //15000 //10000 // Время опроса датчиков температуры м.сек
 #define TimeInterval_RTC            1000    // периодичность обновления информации о текущем времени м.сек
-#define TimeInterval_LCDUpdate      1000     // Периодичность обновления экрана м.сек / меню
+//#define TimeInterval_LCDUpdate      1000  // Периодичность обновления экрана м.сек / меню
+#define TimeInterval_KeyRead        1// 500     // Интервал опроса кнопок м.сек
+
 #define TimeInterval_LCDBacklight   10*1000 // Время через которое выключается подсветка экрана м.сек
 #define DC18_MaxGoodTemp            30      // Максимальная температура после превышения которой срабатывает событие (градусы цельсия)
 //#define numbLEDChannel              5       // количество каналов LED
@@ -58,11 +60,11 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);         // объявляем  переме�
 
 uint32_t TimerPrevMillis[5];                // Массив для хранения времени прошедшего с момента последнего срабатывания таймеров
                                             // Таймеры:
-                                            // 0 - Считывание времени из RTC ??? Not Used
-                                            // 1 - Опрос датчиков температуры
-                                            // 2 - Включение подсветки
-                                            // 3 - обновление строк меню
-                                            // 4 - Обновление LCD экрана/ов
+                                            // 0 - Считывание времени из RTC+ Обновление даты/времени на экране   // Используется
+                                            // 1 - Опрос датчиков температуры               // Используется
+                                            // 2 - Включение подсветки                      // Используется
+                                            // 3 - таймер опроса нажатия кнопки
+                                            // 4 - Обновление LCD экрана/ов                 // Используется
                         
 
 uint8_t activeScreenNumber   = 0;        // Номер активного экрана: 
@@ -161,6 +163,97 @@ MyMENU Menu[] = {                                           // массив дл
 #endif
 
 
+void LCD_Update()
+{
+
+    // обновляем  актуальный (activeScreenNumber) lcd экран
+    
+        // TimerPrevMillis[4] = currentMillis;
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print(Menu[activeScreenNumber].GetRow(1));
+        lcd.setCursor(0, 1);
+        lcd.print(Menu[activeScreenNumber].GetRow(2));
+
+        // Serial.println();
+        //    Serial.print ("Menu[activeScreenNumber].GetRow(1)=") ;      
+        //    Serial.println (Menu[activeScreenNumber].GetRow(1)) ; 
+        //    Serial.println(); Serial.println();
+        //    Serial.print ("Menu[activeScreenNumber].GetRow(2)=") ;      
+        //    Serial.println (Menu[activeScreenNumber].GetRow(2)) ;      
+}
+
+
+void ButtonClick(int k) //ButtonPress
+{
+    if (k>-1) // если кнопка нажата 
+    {
+        switch (k) 
+            { 
+            case -1: {break;}                                                                       // Кнопка Не нажата   
+                
+            case 0: {                                                                               // Нажата кнопка -> / Вперед 
+                                // Serial.println("Key 0 pressed");
+                    if (CurrOperationMode==MyMENU::NotEdit)                                 // если мы НЕ находимся в режиме редактирования 
+                        {
+                            // Serial.print("activeScreenNumber_Before=");
+                            // Serial.println(activeScreenNumber);
+                            activeScreenNumber= activeScreenNumber+1>=MyMENU::MenuAmount?0:activeScreenNumber+1;
+                            // Serial.print("activeScreenNumber_After=");
+                            // Serial.println(activeScreenNumber);
+                        }
+                    else if(CurrOperationMode==MyMENU::RowEdit)                                                                 // если мы находимся в режиме редактирования ()
+                        {
+                            Menu[activeScreenNumber].ptr_on_click(1);
+                            Menu[activeScreenNumber].UpdateRow2_Value();                                          
+                        }    
+                            break;
+                        } 
+
+            case 2: {                                                                           // Нажата кнопка <- /Назад
+                    // Serial.println("Key 2 pressed");
+                    if (CurrOperationMode==MyMENU::NotEdit)                                 // если мы не находимя в режиме редактирования 
+                        {   
+                                        // Serial.print("activeScreenNumber_Before=");
+                                        // Serial.println(activeScreenNumber);
+                        activeScreenNumber= activeScreenNumber-1<0?MyMENU::MenuAmount-1:activeScreenNumber-1;
+                                        // Serial.print("activeScreenNumber_After=");
+                                        // Serial.println(activeScreenNumber);
+                                        } // текущее меню -1
+                    // else {};    
+                    break;}
+
+
+
+            case 1: {                                                                        // Нажата кнопка  ^ / Вверх / Select
+                                // Serial.println("Key 1 pressed");
+                    if (CurrOperationMode!=MyMENU::RowEdit)                              // если мы не находимя в режиме редактирования строки, то переключаемся в режим редактирования
+                        {
+                            CurrOperationMode = static_cast<MyMENU::t_MenuOperationMode>(static_cast<int>(CurrOperationMode)+1);
+                                    // Serial.print ("CurrOperationMode'+1'=");
+                                    // Serial.print (CurrOperationMode);
+                        }
+                    break;}
+                    
+            case 3: {// Нажата кнопка "вниз"/Сancel 
+                                // Serial.println("Key 3 pressed");
+                    if (CurrOperationMode==MyMENU::NotEdit)                                 // если мы не находимся в режиме редактирования 
+                        {activeScreenNumber=0;}                                          //Возврат в главное меню (Дата и температура)
+                    else                                                                    // иначе Понижаем уровень редактирования
+                        {CurrOperationMode = static_cast<MyMENU::t_MenuOperationMode>(static_cast<int>(CurrOperationMode)-1);
+                                    // Serial.print ("CurrOperationMode'-1'=");
+                                    // Serial.print (CurrOperationMode);
+                        }                                
+                    break;}
+            };
+            LCD_Update();
+            // lcd.backlight(); TimerPrevMillis[2]=currentMillis;
+    }
+
+}
+
+
+
 
 
 void setup(void)
@@ -215,6 +308,7 @@ void setup(void)
 
 
 
+LCD_Update();
 
 for (int8_t i =0; i< MyMENU::MenuAmount;i++)
    {Menu[i].DebugPrint();}
@@ -223,31 +317,13 @@ for (int8_t i =0; i< MyMENU::MenuAmount;i++)
 
 
 
-
+//int tIntCount =0;
 
 void loop(void)
 {
     unsigned long currentMillis = millis();
 
-    // обновляем  актуальный (activeScreenNumber) lcd экран
-      if (currentMillis - TimerPrevMillis[4] >= TimeInterval_LCDUpdate)
-    {
 
-        TimerPrevMillis[4] = currentMillis;
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print(Menu[activeScreenNumber].GetRow(1));
-        lcd.setCursor(0, 1);
-        lcd.print(Menu[activeScreenNumber].GetRow(2));
-
-        // Serial.println();
-        //    Serial.print ("Menu[activeScreenNumber].GetRow(1)=") ;      
-        //    Serial.println (Menu[activeScreenNumber].GetRow(1)) ; 
-        //    Serial.println(); Serial.println();
-        //    Serial.print ("Menu[activeScreenNumber].GetRow(2)=") ;      
-        //    Serial.println (Menu[activeScreenNumber].GetRow(2)) ;      
-
-    }
 
    
     // обновляем дату/время в Menu
@@ -256,6 +332,7 @@ void loop(void)
             TimerPrevMillis[0] = currentMillis;
     
                  Menu[0].UpdateRow(1, time.gettime("d.m.Y H:i"));
+                 LCD_Update();
         #ifdef Debug_SetSystemTime
                 Serial.println(">=TimeInterval_RTC");
                 Serial.print("CurrentDateTime=");
@@ -270,7 +347,7 @@ void loop(void)
         {
             TimerPrevMillis[1] = currentMillis;
             Menu[0].UpdateRow(2, "t1=", &DS18_settings.CurrentTemp_D1,"  t2=",  &DS18_settings.CurrentTemp_D2);      
-
+            LCD_Update();
         #ifdef DEBUG_DS18B20
                     Serial.print("TempRead. T1=");
                     Serial.println(DS18_settings.CurrentTemp_D1);
@@ -291,89 +368,36 @@ void loop(void)
 
 
 
+    // обработка нажатия кнопки
+    // if (currentMillis - TimerPrevMillis[3] >= TimeInterval_KeyRead)  
+    // {
+        int8_t k = MyButtons.KeyPressedCode();    
+        if (k>-1) // если кнопка нажата 
+        {   
+         //   tIntCount++;
+            ButtonClick(k);
+            // Serial.print("-----");Serial.print(tIntCount);Serial.println("-----");
+            // Serial.print("MyButtons.KeyPressedCode=");
+            // Serial.println(k);
+            // Serial.println("----------------------"); 
+            // Serial.println(); Serial.println(); Serial.println();
+        }
+        else if (k==-1)
+        {
+            // Serial.println("MyButtons.KeyPressedCode=-2");
+        }
+        else 
+        {
+            Serial.print("MyButtons.KeyPressedCode=");Serial.println(k);
+        }
 
-    int8_t k = MyButtons.KeyPressedCode();    
-    // if (k!=-1) {Serial.print(F("MyButtons.KeyPressedCode()="));
-    //             Serial.println(k);}
-    
-    switch (k) 
-    { Serial.println("switch (k)");
-        case 0: {                                                                           // Нажата кнопка -> / Вперед 
-                    Serial.println("Key 0 pressed");
-                    if (CurrOperationMode==MyMENU::NotEdit)                                 // если мы НЕ находимся в режиме редактирования 
-                        {
-                            Serial.print("activeScreenNumber_Before=");
-                            Serial.println(activeScreenNumber);
-                            activeScreenNumber= activeScreenNumber+1>=MyMENU::MenuAmount?0:activeScreenNumber+1;
-                            Serial.print("activeScreenNumber_After=");
-                            Serial.println(activeScreenNumber);
-                        }
+    //     TimerPrevMillis[3] = currentMillis;
 
-                    else if(CurrOperationMode==MyMENU::RowEdit)                                                                 // если мы находимся в режиме редактирования ()
-                    {
-                        Serial.println (LedSettings[activeScreenNumber-1].channelBrightness);
-                        Menu[activeScreenNumber].ptr_on_click(1);
-                        Menu[activeScreenNumber].UpdateRow2_Value();
-                        Serial.println (LedSettings[activeScreenNumber-1].channelBrightness);
-                                                // (*Menu[1].on_click())(1);
-                    }    
-                    // lcd.backlight(); TimerPrevMillis[2]=currentMillis;
-                    break;
-                } 
-
-        case 2: {                                                                           // Нажата кнопка <- /Назад
-                    Serial.println("Key 2 pressed");
-                    if (CurrOperationMode==MyMENU::NotEdit)                                 // если мы не находимя в режиме редактирования 
-                        {   
-                            Serial.print("activeScreenNumber_Before=");
-                            Serial.println(activeScreenNumber);
-                            activeScreenNumber= activeScreenNumber-1<0?MyMENU::MenuAmount-1:activeScreenNumber-1;
-                            Serial.print("activeScreenNumber_After=");
-                            Serial.println(activeScreenNumber);
-                            } // текущее меню -1
-                    else {
-                        
-                    };    
-
-                    // lcd.backlight(); TimerPrevMillis[2]=currentMillis;
-                    break;}
+    // }
 
 
-
-        case 1: {                                                                        // Нажата кнопка  ^ / Вверх / Select
-                    Serial.println("Key 1 pressed");
-
-                    if (CurrOperationMode!=MyMENU::RowEdit)                              // если мы не находимя в режиме редактирования строки, то переключаемся в режим редактирования
-                    {
-                    CurrOperationMode = static_cast<MyMENU::t_MenuOperationMode>(static_cast<int>(CurrOperationMode)+1);
-                        Serial.print ("CurrOperationMode'+1'=");
-                        Serial.print (CurrOperationMode);
-                                              
-                    
-                    }
-                    break;}//; lcd.backlight(); TimerPrevMillis[2]=currentMillis; break;}
-        
-        case 3: {// Нажата кнопка "вниз"/Сancel 
-                    Serial.println("Key 3 pressed");
-                    if (CurrOperationMode==MyMENU::NotEdit)                                 // если мы не находимся в режиме редактирования 
-                        {activeScreenNumber=0;}                                          //Возврат в главное меню (Дата и температура)
-                    
-                    else                                                                    // иначе Понижаем уровень редактирования
-                     {CurrOperationMode = static_cast<MyMENU::t_MenuOperationMode>(static_cast<int>(CurrOperationMode)-1);
-                        Serial.print ("CurrOperationMode'-1'=");
-                        Serial.print (CurrOperationMode);
-                     }                                
-                    //; lcd.backlight(); TimerPrevMillis[2]=currentMillis;
-                    break;
-                }
-
-
-        
-        
-
-    };
-
-  if (DS18_settings.D1_tempCounter == 0xFF) {   //0xFF =255 или  11111111 в бинарном. При каждои привышении граница температуры пишем 1 в новый бит если получаем 0xFF то значит темперетура превышена на протяжении заданного интервала, введено для избежания "дребезга" 
+  if (DS18_settings.D1_tempCounter == 0xFF) 
+    {   //0xFF =255 или  11111111 в бинарном. При каждои привышении граница температуры пишем 1 в новый бит если получаем 0xFF то значит темперетура превышена на протяжении заданного интервала, введено для избежания "дребезга" 
         DS18_settings.PWM_D1_Level = (DS18_settings.CurrentTemp_D1 - DS18_settings.TargetTemp_D1)*DS18_settings.PWM_StepUP;
         if (DS18_settings.PWM_D1_Level>255){DS18_settings.PWM_D1_Level=255;} //t1 -- счетчик увеличения уровня ШИМ 
         #ifdef DEBUG_DS18B20
@@ -384,10 +408,12 @@ void loop(void)
             Serial.print (",  PWM_1 level: ");
             Serial.println (float(DS18_settings.PWM_D1_Level),2);
         #endif
-        }  
+        analogWrite(portDC18B20PWM_1, DS18_settings.PWM_D1_Level); // записываем значение ШИМ в порт   
+    }  
     else {DS18_settings.PWM_D1_Level=0;}
 
-  if (DS18_settings.D2_tempCounter == 0xFF) {
+  if (DS18_settings.D2_tempCounter == 0xFF) 
+    {
         DS18_settings.PWM_D2_Level = (DS18_settings.CurrentTemp_D2 - DS18_settings.TargetTemp_D2)*DS18_settings.PWM_StepUP;
         if (DS18_settings.PWM_D2_Level>255){DS18_settings.PWM_D2_Level=255;} 
         #ifdef DEBUG_DS18B20
@@ -398,11 +424,13 @@ void loop(void)
             Serial.print (",  PWM_2 level: ");
             Serial.println (float(DS18_settings.PWM_D2_Level),2);
         #endif
+   
+        analogWrite(portDC18B20PWM_2, DS18_settings.PWM_D1_Level); // записываем значение ШИМ в порт    
     }  
     else {DS18_settings.PWM_D2_Level=0;}
 
-    analogWrite(portDC18B20PWM_1, DS18_settings.PWM_D1_Level); // записываем значение ШИМ в порт   
-    analogWrite(portDC18B20PWM_2, DS18_settings.PWM_D1_Level); // записываем значение ШИМ в порт
+    // analogWrite(portDC18B20PWM_1, DS18_settings.PWM_D1_Level); // записываем значение ШИМ в порт   
+    // analogWrite(portDC18B20PWM_2, DS18_settings.PWM_D1_Level); // записываем значение ШИМ в порт
 
 }
 
