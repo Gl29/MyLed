@@ -14,11 +14,13 @@ MyMENU::MyMENU(t_MenuType MenuType, char *Row1, void(*on_click)(int8_t), int8_t 
     MyMENU();
     ptr_on_click=on_click;
     _func_param= func_param;
-};
+}; 
 
 
 MyMENU::MyMENU(t_MenuType MenuType, char *Row1, char *Row2): _MenuType(MenuType), _ptr_Row1(Row1), _ptr_Row2(Row2)
-{MyMENU();};
+{
+    MyMENU();
+};
 
 
 MyMENU::MyMENU(t_MenuType MenuType, char *Row1, const uint8_t *RowParamValue):_MenuType(MenuType), _ptr_Row1(Row1), _ptr_Row2_ParamValue(RowParamValue)
@@ -56,13 +58,31 @@ void MyMENU::SetMenuType (t_MenuType MenuType)
    _MenuType=MenuType;
 }  
 
+// void MyMENU::UpdateRow2_Value()
+// {
+//     char chrTMP[3];
+//     sprintf(chrTMP, "%c%d", '>',*_ptr_Row2_ParamValue);
+//     strcat(chrTMP, " \0");
+//     strcpy(_Row2, chrTMP);
+// }
+
+
 void MyMENU::UpdateRow2_Value()
 {
+    char chrTMP_1[16]= {'\0'};  // в этот массив собираем итоговую строку
     char chrTMP[3];
     sprintf(chrTMP, "%c%d", '>',*_ptr_Row2_ParamValue);
-    strcat(chrTMP, " \0");
-    strcpy(_Row2, chrTMP);
+    strcat(chrTMP_1, chrTMP);
+    if (strlen(chrTMP_1)<16)
+    {
+         while (strlen(chrTMP_1)<16){strcat(chrTMP_1, " \0");} // "Добиваем" строчку  cпробелами
+    } 
+    strcpy(_Row2, chrTMP_1);
 }
+
+
+
+
 
 void MyMENU::UpdateRow (byte RowNumb,   char *Row1,  float *param1,  char *Row2,  float *param2)
 // добавляем 2 строки char[] RowNumb на экран (Float)

@@ -10,7 +10,7 @@
 #include <iarduino_RTC.h>       // подключаем библиотеку для работы с RTC модулем https://lesson.iarduino.ru/page/urok-17-podklyuchenie-rtc-chasy-realnogo-vremeni-s-knopkami/
                                 // http://iarduino.ru/file/235.html
 
-// #include <EEPROM.h>          // Библиотека для работы с EEPROM 
+#include <EEPROM.h>          // Библиотека для работы с EEPROM 
 // #include <leOS.h>            // Шедуллер задач -- если запущено несколько задач начинаются тормоза, пробуем без него
 //#include <LiquidMenu.h>         // Библиотека для работы с меню -- каждый экран "жрёт" много памяти
 
@@ -79,34 +79,52 @@ uint8_t dateTimeSetMode        = 1;        // Переменная хранит 
                                             // 2-мин 3-час 4-день 5-мес 6-год 7-день_недели //1-сек
                                             // 8-11 - 
 
+uint8_t EPROM_NeedWrite         =0;         // признак того что необходимо провести запись парамтеров в EPROM
+
  //MyMENU  Menu[numbLEDChannel+1];
  MyMENU::t_MenuOperationMode CurrOperationMode=MyMENU::NotEdit;
-//int tmpI =0;
-
 
 
 
 LedChannel LedSettings [5] =                                 // структура для зранетия параметров LED каналов
         {
-            {"ColdWhite_1", 20, LedChannel::BlinkOff, 11},  // название, яркость, признак мигания, номер меню (Экрана) + номер строки на котором отображается
-            {"ColdWhite_2", 30, LedChannel::BlinkOff, 12},
-            {"WarmWhite_1", 30, LedChannel::BlinkOff, 21},
-            {"Red",         30, LedChannel::BlinkOff, 22},
-            {"Blue",        30, LedChannel::BlinkOff, 31}
+            {"ColdWhite_1     ", 20, LedChannel::BlinkOff},  // название, яркость, признак мигания, номер меню (Экрана) + номер строки на котором отображается
+            {"ColdWhite_2     ", 30, LedChannel::BlinkOff},
+            {"WarmWhite_1     ", 30, LedChannel::BlinkOff},
+            {"Red             ", 30, LedChannel::BlinkOff},
+            {"Blue            ", 30, LedChannel::BlinkOff}
         };
 
- void setDateTime(int8_t i){
+
+
+
+
+
+
+
+// блок функций для корректироки значений парамтеров меню
+
+void setDateTime(int8_t i){
      //tmpI++;
      };
- void setLedBright(int8_t increment)
+void setLedBright(int8_t increment)
     {
             // !!!!!! activeScreenNumber-1 будет работать только при условии что параметры лед каналов будут начинаться со второго єкрана
             // по хорошему в функцию также надо перадавать номер канала по кторому мы хотим поменять яркость
             LedSettings[activeScreenNumber-1].channelBrightness += increment;};
  
- void setParam(int8_t i){
+void setParam(int8_t i){
      //tmpI++;
      };
+
+// шаблоны функций
+void EPROM_Write(int8_t);
+void EPROM_Read ();
+
+
+
+
+
 
 
 char DateTime[17]     ="________________";      // переменная необходима для хранения первой строки меню (в классе только указатель на эту строку)  
@@ -119,8 +137,47 @@ MyMENU Menu[] = {                                           // массив дл
     { MyMENU::LEDMenu,  LedSettings[2].channelName, LedSettings[2].ptr_channelBrightness, setLedBright, 1},    
     { MyMENU::LEDMenu,  LedSettings[3].channelName, LedSettings[3].ptr_channelBrightness, setLedBright, 1},
     { MyMENU::LEDMenu,  LedSettings[4].channelName, LedSettings[4].ptr_channelBrightness, setLedBright, 1},        
-    { MyMENU::ParamMenu,    "Param_1",  "____", setParam,   1},        
+    { MyMENU::ParamMenu,    "Param_1         ",  "___", setParam,   1},   
+    { MyMENU::ParamMenu,    "Save (N=0 / Y=1)",  &EPROM_NeedWrite, EPROM_Write,  1},   
+         
 };
+
+
+void EPROM_Write(int8_t increment)
+{   
+
+    EPROM_NeedWrite +=increment;
+
+    if (EPROM_NeedWrite==1)
+    {
+        EEPROM.put(0, 111); // пишем в нулевой регистр 111 как признак того что произедена запись имеено из данной функции и последующие ячейки содержат параметры а не мусор
+             for (uint8_t i=0;i<5;i++)
+        {
+            EEPROM.put(i+1, LedSettings[i].channelBrightness);
+        }
+            // Serial.print    ("EPROM_NeedWrite 3 =");
+            // Serial.println  (EPROM_NeedWrite);
+    }
+    else
+    { 
+        EPROM_NeedWrite=0;
+    }    
+};    
+
+
+void EPROM_Read ()
+{
+    if (EEPROM.read(0)==111)
+    {
+        for (uint8_t i=0;i<5;i++)
+        {
+            EEPROM.get(i+1,LedSettings[i].channelBrightness);
+            Menu[i+1].UpdateRow2_Value(); 
+        }
+
+    }
+}
+
 
 
 #ifdef SetSystemTime  // процедура нужна для установики системного времени в модуль RTC  в блоке void setup(void)
@@ -162,14 +219,13 @@ MyMENU Menu[] = {                                           // массив дл
         }
 #endif
 
-
 void LCD_Update()
 {
 
     // обновляем  актуальный (activeScreenNumber) lcd экран
     
         // TimerPrevMillis[4] = currentMillis;
-        lcd.clear();
+    //    lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print(Menu[activeScreenNumber].GetRow(1));
         lcd.setCursor(0, 1);
@@ -183,18 +239,17 @@ void LCD_Update()
         //    Serial.println (Menu[activeScreenNumber].GetRow(2)) ;      
 }
 
-
 void ButtonClick(int k) //ButtonPress
 {
     if (k>-1) // если кнопка нажата 
     {
         switch (k) 
             { 
-            case -1: {break;}                                                                       // Кнопка Не нажата   
+            case -1: {break;}                                                               // Кнопка Не нажата   
                 
-            case 0: {                                                                               // Нажата кнопка -> / Вперед 
+            case 0: {                                                                       // Нажата кнопка -> / Вперед 
                                 // Serial.println("Key 0 pressed");
-                    if (CurrOperationMode==MyMENU::NotEdit)                                 // если мы НЕ находимся в режиме редактирования 
+                        if (CurrOperationMode==MyMENU::NotEdit)                                 // если мы НЕ находимся в режиме редактирования 
                         {
                             // Serial.print("activeScreenNumber_Before=");
                             // Serial.println(activeScreenNumber);
@@ -202,28 +257,32 @@ void ButtonClick(int k) //ButtonPress
                             // Serial.print("activeScreenNumber_After=");
                             // Serial.println(activeScreenNumber);
                         }
-                    else if(CurrOperationMode==MyMENU::RowEdit)                                                                 // если мы находимся в режиме редактирования ()
+                        else if(CurrOperationMode==MyMENU::RowEdit)                             // если мы находимся в режиме редактирования ()
                         {
                             Menu[activeScreenNumber].ptr_on_click(1);
                             Menu[activeScreenNumber].UpdateRow2_Value();                                          
                         }    
-                            break;
-                        } 
+                    break;
+                    } 
 
             case 2: {                                                                           // Нажата кнопка <- /Назад
                     // Serial.println("Key 2 pressed");
-                    if (CurrOperationMode==MyMENU::NotEdit)                                 // если мы не находимя в режиме редактирования 
+                        if (CurrOperationMode==MyMENU::NotEdit)                                 // если мы не находимя в режиме редактирования 
                         {   
                                         // Serial.print("activeScreenNumber_Before=");
                                         // Serial.println(activeScreenNumber);
-                        activeScreenNumber= activeScreenNumber-1<0?MyMENU::MenuAmount-1:activeScreenNumber-1;
+                            activeScreenNumber= activeScreenNumber-1<0?MyMENU::MenuAmount-1:activeScreenNumber-1;
                                         // Serial.print("activeScreenNumber_After=");
                                         // Serial.println(activeScreenNumber);
-                                        } // текущее меню -1
+                        } // текущее меню -1
+                        else if(CurrOperationMode==MyMENU::RowEdit)                             // если мы находимся в режиме редактирования ()
+                        {
+                            Menu[activeScreenNumber].ptr_on_click(-1);
+                            Menu[activeScreenNumber].UpdateRow2_Value();      
+                        }
                     // else {};    
-                    break;}
-
-
+                    break;
+                    }
 
             case 1: {                                                                        // Нажата кнопка  ^ / Вверх / Select
                                 // Serial.println("Key 1 pressed");
@@ -247,9 +306,8 @@ void ButtonClick(int k) //ButtonPress
                     break;}
             };
             LCD_Update();
-            // lcd.backlight(); TimerPrevMillis[2]=currentMillis;
+            lcd.backlight(); TimerPrevMillis[2]=millis();
     }
-
 }
 
 
@@ -313,6 +371,9 @@ LCD_Update();
 for (int8_t i =0; i< MyMENU::MenuAmount;i++)
    {Menu[i].DebugPrint();}
 
+//    EPROM_Write(); 
+    EPROM_Read();
+
 }
 
 
@@ -359,10 +420,10 @@ void loop(void)
     
 
     // --- LCD Подсветка
-    if (currentMillis - TimerPrevMillis[2] >= TimeInterval_DS18D20)
+    if (currentMillis - TimerPrevMillis[2] >= TimeInterval_LCDBacklight)
     {
         TimerPrevMillis[2] = currentMillis;
-        //lcd.noBacklight();
+        lcd.noBacklight();
     }
 
 
@@ -391,9 +452,6 @@ void loop(void)
             Serial.print("MyButtons.KeyPressedCode=");Serial.println(k);
         }
 
-    //     TimerPrevMillis[3] = currentMillis;
-
-    // }
 
 
   if (DS18_settings.D1_tempCounter == 0xFF) 

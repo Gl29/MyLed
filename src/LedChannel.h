@@ -9,24 +9,23 @@ class LedChannel {
       const uint8_t MaxBrightness       =100; // 100%
     
     public:
-        uint8_t channelBrightness   =MaxBrightness/3;   // значение яркости канала  микросхема 
+        uint8_t channelBrightness;                     // значение яркости канала  микросхема 
                                                         // TLC5940NT - 16-канальный ШИМ драйвер 
                                                         // с 12-битным регулированием скважности (0-4096) и 6-битным (0-63) регулированием тока.
+        
         uint8_t *ptr_channelBrightness;                 // указатель на переменную channelBrightness
         enum t_BlinkMode {BlinkOff=1, BlinkRowOn, BlinkRowOFF, BlinkParamON, BlinkParamOFF} blink; 
-        char      *channelName;              // текстовое имя LED канала     
-        byte        channelNumber;              // номер  LED канала 
-        uint8_t     LcdRowNumber;               // номер экрана и строк на которых выводятся параметры данного канала
+        char      *channelName;                         // текстовое имя LED канала     
+   
+
 
     /**	Конструктор класса **/	
- //   LedChannel (String _Name,byte _channelNumber, uint16_t _cBR, bool _blk = false, uint8_t _LCDScreenNumb = 0)
-    LedChannel ( char *_Name, //byte _channelNumber, 
-                uint8_t _cBR, t_BlinkMode _blk=BlinkOff, uint8_t _LCDScreenRowNumb = 0)   
+    LedChannel ( char *_Name, uint8_t _cBR, t_BlinkMode _blk=BlinkOff) //, uint8_t _LCDScreenRowNumb = 0)   
     {
         channelName         = _Name;
         channelBrightness   =_cBR>MaxBrightness?MaxBrightness:_cBR;
         blink               =_blk;
-        LcdRowNumber        = _LCDScreenRowNumb;
+    //    LcdRowNumber        = _LCDScreenRowNumb;
         ptr_channelBrightness = &channelBrightness;
 
     }    
