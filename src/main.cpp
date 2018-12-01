@@ -37,6 +37,7 @@
 //#define TimeInterval_LCDUpdate      1000  // Периодичность обновления экрана м.сек / меню
 #define TimeInterval_KeyRead        1// 500     // Интервал опроса кнопок м.сек
 
+#define TimeInterval_LedCNL_Test    100    // Время через которое добавляется +1 условная минтута времени для процедуры теста определения яркости ЛЕД канала
 #define TimeInterval_LCDBacklight   10*1000 // Время через которое выключается подсветка экрана м.сек
 #define DC18_MaxGoodTemp            30      // Максимальная температура после превышения которой срабатывает событие (градусы цельсия)
 //#define numbLEDChannel              5       // количество каналов LED
@@ -60,11 +61,11 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);         // объявляем  переме�
 
 uint32_t TimerPrevMillis[5];                // Массив для хранения времени прошедшего с момента последнего срабатывания таймеров
                                             // Таймеры:
-                                            // 0 - Считывание времени из RTC+ Обновление даты/времени на экране   // Используется
-                                            // 1 - Опрос датчиков температуры               // Используется
-                                            // 2 - Включение подсветки                      // Используется
-                                            // 3 - таймер опроса нажатия кнопки
-                                            // 4 - Обновление LCD экрана/ов                 // Используется
+                                            // 0 - Считывание времени из RTC+ Обновление даты/времени на экране
+                                            // 1 - Опрос датчиков температуры
+                                            // 2 - Включение подсветки                    
+                                            // 3 - Счётчик времени для обновления  яркости ЛЕД каналов
+                                            // 4 - 
                         
 
 uint8_t activeScreenNumber   = 0;        // Номер активного экрана: 
@@ -80,26 +81,23 @@ uint8_t dateTimeSetMode        = 1;        // Переменная хранит 
                                             // 8-11 - 
 
 uint8_t EPROM_NeedWrite         =0;         // признак того что необходимо провести запись парамтеров в EPROM
+uint8_t demoMode                =0;         // переменная-флаг: обычный режим=0 , демо режим =1 (тест лед каналов)  
+uint8_t tmpHour                 =0;         // Храним текущее значение "часа" для демо режима 
+uint8_t tmpMinute               =0;         // Храним текущее значение "минут" для демо режима
+
 
  //MyMENU  Menu[numbLEDChannel+1];
  MyMENU::t_MenuOperationMode CurrOperationMode=MyMENU::NotEdit;
 
 
-
 LedChannel LedSettings [5] =                                 // структура для зранетия параметров LED каналов
         {
-            {"ColdWhite_1     ", 20, LedChannel::BlinkOff},  // название, яркость, признак мигания, номер меню (Экрана) + номер строки на котором отображается
-            {"ColdWhite_2     ", 30, LedChannel::BlinkOff},
-            {"WarmWhite_1     ", 30, LedChannel::BlinkOff},
-            {"Red             ", 30, LedChannel::BlinkOff},
-            {"Blue            ", 30, LedChannel::BlinkOff}
+            {"ColdWhite_1     ", 20},  // название, яркость, признак мигания, номер меню (Экрана) + номер строки на котором отображается
+            {"ColdWhite_2     ", 30},
+            {"WarmWhite_1     ", 30},
+            {"Red             ", 30},
+            {"Blue            ", 30}
         };
-
-
-
-
-
-
 
 
 // блок функций для корректироки значений парамтеров меню
@@ -111,34 +109,38 @@ void setLedBright(int8_t increment)
     {
             // !!!!!! activeScreenNumber-1 будет работать только при условии что параметры лед каналов будут начинаться со второго єкрана
             // по хорошему в функцию также надо перадавать номер канала по кторому мы хотим поменять яркость
-            LedSettings[activeScreenNumber-1].channelBrightness += increment;};
+            LedSettings[activeScreenNumber-1].targetChannelBrightness += increment;};
  
 void setParam(int8_t i){
      //tmpI++;
      };
 
+
+
 // шаблоны функций
 void EPROM_Write(int8_t);
 void EPROM_Read ();
+void onof_LedBrightTest(int8_t);
+void LCD_Update();
 
 
 
+char mnuLedBrtTest[] = "LedBrt. test 0/1";
 
-
-
-
-char DateTime[17]     ="________________";      // переменная необходима для хранения первой строки меню (в классе только указатель на эту строку)  
+char chrDateTime[17]     ="________________";   // переменная необходима для хранения первой строки меню (в классе только указатель на эту строку)  
 byte MyMENU::MenuAmount=0;                      // инициация счётчика количества членов класса MyMENU
 
 MyMENU Menu[] = {                                           // массив для хранения строк меню, каждая строка - 1 экран
-    { MyMENU::MainMenu, DateTime, setDateTime,1},
+    { MyMENU::MainMenu, chrDateTime, setDateTime,1},
     { MyMENU::LEDMenu,  LedSettings[0].channelName, LedSettings[0].ptr_channelBrightness, setLedBright, 1}, 
     { MyMENU::LEDMenu,  LedSettings[1].channelName, LedSettings[1].ptr_channelBrightness, setLedBright, 1},   
     { MyMENU::LEDMenu,  LedSettings[2].channelName, LedSettings[2].ptr_channelBrightness, setLedBright, 1},    
     { MyMENU::LEDMenu,  LedSettings[3].channelName, LedSettings[3].ptr_channelBrightness, setLedBright, 1},
     { MyMENU::LEDMenu,  LedSettings[4].channelName, LedSettings[4].ptr_channelBrightness, setLedBright, 1},        
     { MyMENU::ParamMenu,    "Param_1         ",  "___", setParam,   1},   
-    { MyMENU::ParamMenu,    "Save (N=0 / Y=1)",  &EPROM_NeedWrite, EPROM_Write,  1},   
+    { MyMENU::ParamMenu,    "Save (N=0 / Y=1)",  &EPROM_NeedWrite, EPROM_Write,  1}, 
+    { MyMENU::ParamMenu,    mnuLedBrtTest,  &demoMode, onof_LedBrightTest,  1}, 
+      
          
 };
 
@@ -151,9 +153,9 @@ void EPROM_Write(int8_t increment)
     if (EPROM_NeedWrite==1)
     {
         EEPROM.put(0, 111); // пишем в нулевой регистр 111 как признак того что произедена запись имеено из данной функции и последующие ячейки содержат параметры а не мусор
-             for (uint8_t i=0;i<5;i++)
+             for (int i=0;i<5;i++)
         {
-            EEPROM.put(i+1, LedSettings[i].channelBrightness);
+            EEPROM.put(i+1, LedSettings[i].targetChannelBrightness);
         }
             // Serial.print    ("EPROM_NeedWrite 3 =");
             // Serial.println  (EPROM_NeedWrite);
@@ -169,14 +171,46 @@ void EPROM_Read ()
 {
     if (EEPROM.read(0)==111)
     {
-        for (uint8_t i=0;i<5;i++)
+        for (int i=0;i<5;i++)
         {
-            EEPROM.get(i+1,LedSettings[i].channelBrightness);
+            EEPROM.get(i+1,LedSettings[i].targetChannelBrightness);
             Menu[i+1].UpdateRow2_Value(); 
         }
 
     }
 }
+
+
+// включение/выключение демо режима
+void onof_LedBrightTest(int8_t increment)
+{
+    switch (increment)
+    {
+        case -1:
+            demoMode = demoMode+increment==0?0:1;
+            break;
+        case 1:
+            demoMode = demoMode+increment==1?1:0;
+            break;
+    }
+
+    if (demoMode==0)  // демо режим выключен
+    {   
+        Serial.println ("demoMode==0");
+        Menu[8].UpdateRow(1, mnuLedBrtTest);  //вышли из режима таста, восстатавливаем первую строку меню к стандартному значению
+        LCD_Update();
+    }
+    else
+    {
+        Serial.println ("demoMode==1");
+         tmpHour=0;
+         tmpMinute=0;
+
+    }
+    //    Serial.println();
+    //   Serial.print("demoMode=");Serial.println(demoMode);
+     //    delay(1500);   
+};
 
 
 
@@ -224,19 +258,18 @@ void LCD_Update()
 
     // обновляем  актуальный (activeScreenNumber) lcd экран
     
-        // TimerPrevMillis[4] = currentMillis;
     //    lcd.clear();
         lcd.setCursor(0, 0);
         lcd.print(Menu[activeScreenNumber].GetRow(1));
         lcd.setCursor(0, 1);
         lcd.print(Menu[activeScreenNumber].GetRow(2));
 
-        // Serial.println();
-        //    Serial.print ("Menu[activeScreenNumber].GetRow(1)=") ;      
-        //    Serial.println (Menu[activeScreenNumber].GetRow(1)) ; 
-        //    Serial.println(); Serial.println();
-        //    Serial.print ("Menu[activeScreenNumber].GetRow(2)=") ;      
-        //    Serial.println (Menu[activeScreenNumber].GetRow(2)) ;      
+         Serial.println();
+            Serial.print ("Menu[activeScreenNumber].GetRow(1)=") ;      
+            Serial.println (Menu[activeScreenNumber].GetRow(1)) ; 
+            Serial.println(); Serial.println();
+            Serial.print ("Menu[activeScreenNumber].GetRow(2)=") ;      
+            Serial.println (Menu[activeScreenNumber].GetRow(2)) ;      
 }
 
 void ButtonClick(int k) //ButtonPress
@@ -318,7 +351,7 @@ void setup(void)
 {       
     #ifdef DEBUG_Setup
         Serial.begin(SERIAL_BAUD);
-        Serial.println("Debuging start......4...");
+        Serial.println(F("Debuging start......4..."));
         Serial.println();
         Serial.println();
     #endif
@@ -366,34 +399,101 @@ void setup(void)
 
 
 
-LCD_Update();
+    LCD_Update();
 
-for (int8_t i =0; i< MyMENU::MenuAmount;i++)
-   {Menu[i].DebugPrint();}
+    // for (int i =0; i< MyMENU::MenuAmount;i++)
+    // {Menu[i].DebugPrint();}
 
-//    EPROM_Write(); 
-    EPROM_Read();
+    //    EPROM_Write(); 
+        EPROM_Read();
 
+
+
+
+    // Задаём базовые параметры включения/выключения всех ЛЕД каналов 
+    // Параметры - Номер таймера 0/1; час включения; минуты включения; "длина" включения,  аналогично выключение 
+    for (int i =0; i<5; i++)
+        {
+            LedSettings[i].SetTimer(0,7,30,30,12,0,10); 
+            LedSettings[i].SetTimer(1,16,0,1,22,0,15);
+        }
+
+    delay (1000);  // удалить
 }
 
 
 
-//int tIntCount =0;
 
 void loop(void)
 {
+ 
     unsigned long currentMillis = millis();
+    
+    // обновление/расчёт параметров яркости для ЛЕД каналов
+    if (currentMillis - TimerPrevMillis[3] >= TimeInterval_LedCNL_Test)
+    {
+        if (demoMode==1) // если включен демо режим то начинаем считать "виртуальное" время 
+        {
+            TimerPrevMillis[3] = currentMillis;
+            tmpMinute +=1; //+2                         // тут можно задать шаг прирощения тестовых минут
+            if (tmpMinute >=60)
+            {
+                tmpHour +=1; tmpMinute =0;
+            } 
+            if (tmpHour >23) {tmpHour=0;}
+
+            TimerPrevMillis[2]=currentMillis;                   // блокируем отключение подсветки
+            // Serial.println ("TestTest");    
+            char tmpI3[17]="Test ";
+            char t[3];
+            char t1[3];
+                
+            sprintf(t,"%u",tmpHour);
+            strcat(tmpI3, t);
+            strcat(tmpI3, ":");
+            dtostrf(tmpMinute, 2, 0, t1); // не знаю почему но 2 sprintf в одной функции работать отказались. Пришлось использовать dtostrf
+            strcat(tmpI3, t1);
+            // Serial.println (tmpI3); 
+            Menu[8].UpdateRow(1, tmpI3);
+            //Menu[0].UpdateRow(1, tmpI3);
+            LCD_Update();
+
+
+        }
+        else
+        {
+            tmpHour = time.Hours;
+            tmpMinute = time.minutes;
+            
+        }
+        // Serial.print (F("tmpHour="));
+        // Serial.print (tmpHour);
+        // Serial.print ("\t");
+        // Serial.print (F("tmpMinute="));
+        // Serial.println (tmpMinute);
+
+        // обновляем рассчётное значение яркости всех ЛЕД каналов с учётом установленных таймеров включения/выключения и параметров рассвета/заката
+        for (int i=0;i<5;i++)
+        {
+
+            LedSettings[i].update_PWM_Level (tmpHour, tmpMinute);
+            //  delay(50);
+            // Serial.print ("\t");Serial.print ("\t");Serial.print ("\t");
+            // Serial.print (F("СhannelName="));    Serial.print(LedSettings[i].channelName);
+            // Serial.print ("\t");
+            // Serial.print (F("PWM_channel_level="));    Serial.println(LedSettings[i].PWM_channel_level);
+        }
+    }
 
 
 
-   
+
     // обновляем дату/время в Menu
     if (currentMillis - TimerPrevMillis[0] >= TimeInterval_RTC)
     {
             TimerPrevMillis[0] = currentMillis;
-    
-                 Menu[0].UpdateRow(1, time.gettime("d.m.Y H:i"));
-                 LCD_Update();
+            Menu[0].UpdateRow(1, time.gettime("d.m.Y H:i"));
+            LCD_Update();
         #ifdef Debug_SetSystemTime
                 Serial.println(">=TimeInterval_RTC");
                 Serial.print("CurrentDateTime=");
@@ -430,18 +530,10 @@ void loop(void)
 
 
     // обработка нажатия кнопки
-    // if (currentMillis - TimerPrevMillis[3] >= TimeInterval_KeyRead)  
-    // {
-        int8_t k = MyButtons.KeyPressedCode();    
-        if (k>-1) // если кнопка нажата 
+    int8_t k = MyButtons.KeyPressedCode();    
+    if (k>-1) // если кнопка нажата 
         {   
-         //   tIntCount++;
             ButtonClick(k);
-            // Serial.print("-----");Serial.print(tIntCount);Serial.println("-----");
-            // Serial.print("MyButtons.KeyPressedCode=");
-            // Serial.println(k);
-            // Serial.println("----------------------"); 
-            // Serial.println(); Serial.println(); Serial.println();
         }
         else if (k==-1)
         {
@@ -486,9 +578,5 @@ void loop(void)
         analogWrite(portDC18B20PWM_2, DS18_settings.PWM_D1_Level); // записываем значение ШИМ в порт    
     }  
     else {DS18_settings.PWM_D2_Level=0;}
-
-    // analogWrite(portDC18B20PWM_1, DS18_settings.PWM_D1_Level); // записываем значение ШИМ в порт   
-    // analogWrite(portDC18B20PWM_2, DS18_settings.PWM_D1_Level); // записываем значение ШИМ в порт
-
 }
 

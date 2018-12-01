@@ -3,10 +3,10 @@
 
 // ------------------------------
 // !!! Внимание, на досуге правильно переписать конструкторы с целью оптимизации кода, 
-// посмотреть статью по поводу делегирования кончтрукторов
+// посмотреть статью по поводу делегирования конструкторов
 MyMENU::MyMENU()
 {
- MyMENU::MenuAmount++;
+ MyMENU::MenuAmount++; //увеличиваем счётчик созданных меню на 1 
 };
 
 MyMENU::MyMENU(t_MenuType MenuType, char *Row1, void(*on_click)(int8_t), int8_t func_param=1): _MenuType(MenuType), _ptr_Row1(Row1)
@@ -99,7 +99,7 @@ void MyMENU::UpdateRow (byte RowNumb,   char *Row1,  float *param1,  char *Row2,
     strcat(chrTMP_1, chrTMP); 
 
     if (strlen(chrTMP_1)<16){
-         while (strlen(chrTMP_1)<16){strcat(chrTMP_1, " \0");} // "Добиваем" строчку  cпробелами
+         while (strlen(chrTMP_1)<16){strcat(chrTMP_1, " \0");} // "Добиваем" строчку  c пробелами
     }
 
     if(RowNumb ==1){strcpy(_ptr_Row1, chrTMP_1);}

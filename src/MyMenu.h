@@ -3,7 +3,7 @@
 
 #include "Arduino.h"
 #include <string.h>
-#define DEBUG_MyMenu
+//#define DEBUG_MyMenu
 
 
 class MyMENU 
