@@ -20,6 +20,7 @@
 #include "MyAddFunctions.h"     // сборник дополнительных функций вынесен в отдельный файл "дабы не засорять эфир" 
 #include "MyDC18B20.h"          // код для работы с датчикками темперетуры
 #include "LedChannel.h"         // код для работы с LED каналами
+#include "Tlc5940.h"            // библиотека для работы с драйвером светодиодов tlc5940
 
 #define DEBUG_Setup             // Включаем общий режим отладки
 //#define DEBUG_DS18B20           // Включаем режим отладки Датчика температуры
@@ -264,12 +265,12 @@ void LCD_Update()
         lcd.setCursor(0, 1);
         lcd.print(Menu[activeScreenNumber].GetRow(2));
 
-         Serial.println();
-            Serial.print ("Menu[activeScreenNumber].GetRow(1)=") ;      
-            Serial.println (Menu[activeScreenNumber].GetRow(1)) ; 
-            Serial.println(); Serial.println();
-            Serial.print ("Menu[activeScreenNumber].GetRow(2)=") ;      
-            Serial.println (Menu[activeScreenNumber].GetRow(2)) ;      
+        //  Serial.println();
+        //     Serial.print ("Menu[activeScreenNumber].GetRow(1)=") ;      
+        //     Serial.println (Menu[activeScreenNumber].GetRow(1)) ; 
+        //     Serial.println(); Serial.println();
+        //     Serial.print ("Menu[activeScreenNumber].GetRow(2)=") ;      
+        //     Serial.println (Menu[activeScreenNumber].GetRow(2)) ;      
 }
 
 void ButtonClick(int k) //ButtonPress
@@ -361,7 +362,9 @@ void setup(void)
     time.begin();                         // инициируем RTC модуль
   
 
-
+    //Инициализируем  Tlc5940
+    Tlc.init();
+    Tlc.clear();
 
     // устанавливаем время в RTC = системному времени и дате в момент компиляции 
     #ifdef SetSystemTime                
@@ -412,11 +415,31 @@ void setup(void)
 
     // Задаём базовые параметры включения/выключения всех ЛЕД каналов 
     // Параметры - Номер таймера 0/1; час включения; минуты включения; "длина" включения,  аналогично выключение 
-    for (int i =0; i<5; i++)
-        {
-            LedSettings[i].SetTimer(0,7,30,30,12,0,10); 
-            LedSettings[i].SetTimer(1,16,0,1,22,0,15);
-        }
+    // for (int i =0; i<5; i++)
+    //     {
+    //         LedSettings[i].SetTimer(0,7,30,30,12,0,10); 
+    //         LedSettings[i].SetTimer(1,16,0,1,22,0,15);
+    //     }
+
+    LedSettings[0].SetTimer(0,7,30,30,12,0,10); 
+    LedSettings[0].SetTimer(1,16,0,1,21,20,30);
+
+    LedSettings[1].SetTimer(0,7,00,30,12,30,10); 
+    LedSettings[1].SetTimer(1,16,0,1,21,30,5);
+
+    LedSettings[2].SetTimer(0,8,00,50,11,0,10); 
+    LedSettings[2].SetTimer(1,16,0,1,22,0,5);
+
+    LedSettings[3].SetTimer(0,8,00,10,13,0,35); 
+    LedSettings[3].SetTimer(1,16,0,1,21,10,10);
+
+    LedSettings[4].SetTimer(0,8,00,20,14,0,45); 
+    LedSettings[4].SetTimer(1,16,0,1,21,30,5);
+
+
+
+
+
 
     delay (1000);  // удалить
 }
@@ -429,13 +452,40 @@ void loop(void)
  
     unsigned long currentMillis = millis();
     
+
+//    static int tmpLedBright=0;
+//     static int rollUp =1; // Храним "направление" изменения яркости тестовых светодиодов
+//     //Устанавливаем нулевую яркость всех светодиодов
+//     Tlc.clear();
+
+	
+
+//     if ((tmpLedBright+rollUp) >4095 || (tmpLedBright+rollUp) <0) {rollUp = -rollUp;}
+//     tmpLedBright +=rollUp;
+	
+//      Serial.print ("tmpLedBright="); Serial.print (tmpLedBright);
+//      Serial.print (" rollUp="); Serial.println (rollUp);
+    
+// 	//Для каждого из 16 каналов (у Tlc 16 каналов):
+//     for (int channel = 0; channel < 16; channel += 1) 
+//     {
+//         //Устанавливаем  яркость
+//         Tlc.set(channel, tmpLedBright);
+//     }
+//     //Применяем изменения (зажигаем светодиоды)
+//     Tlc.update();
+
+//    if (tmpLedBright <0){delay(3000);}   
+
+
+
     // обновление/расчёт параметров яркости для ЛЕД каналов
     if (currentMillis - TimerPrevMillis[3] >= TimeInterval_LedCNL_Test)
     {
-        if (demoMode==1) // если включен демо режим то начинаем считать "виртуальное" время 
+        if (demoMode==1) // если включен демо режим то начинаем считать и выводить на экран "виртуальное" время 
         {
             TimerPrevMillis[3] = currentMillis;
-            tmpMinute +=1; //+2                         // тут можно задать шаг прирощения тестовых минут
+            tmpMinute +=1; //+2                                 // тут можно задать шаг приращения тестовых минут
             if (tmpMinute >=60)
             {
                 tmpHour +=1; tmpMinute =0;
@@ -444,7 +494,7 @@ void loop(void)
 
             TimerPrevMillis[2]=currentMillis;                   // блокируем отключение подсветки
             // Serial.println ("TestTest");    
-            char tmpI3[17]="Test ";
+            char tmpI3[17]="Test ";                             // генерируем строку для экрана с информацией о параметрах теста
             char t[3];
             char t1[3];
                 
@@ -457,8 +507,6 @@ void loop(void)
             Menu[8].UpdateRow(1, tmpI3);
             //Menu[0].UpdateRow(1, tmpI3);
             LCD_Update();
-
-
         }
         else
         {
@@ -482,8 +530,23 @@ void loop(void)
             // Serial.print (F("СhannelName="));    Serial.print(LedSettings[i].channelName);
             // Serial.print ("\t");
             // Serial.print (F("PWM_channel_level="));    Serial.println(LedSettings[i].PWM_channel_level);
+        
         }
+        //Передаём рассчитанную "яркость" в tlc5940 для управления драйверами светодиодов (в tlc5940 16 каналов):
+        // в текущей схеме используются "ноги" №№ 1,2,3,4,11
+  
+        Tlc.set(1,  (uint16_t)LedSettings[0].PWM_channel_level);
+        Tlc.set(2,  (uint16_t)LedSettings[1].PWM_channel_level);
+        Tlc.set(3,  (uint16_t)LedSettings[2].PWM_channel_level);
+        Tlc.set(4,  (uint16_t)LedSettings[3].PWM_channel_level);   
+        Tlc.set(11, (uint16_t)LedSettings[4].PWM_channel_level);
+   
+        Tlc.update();
     }
+
+
+   
+
 
 
 
