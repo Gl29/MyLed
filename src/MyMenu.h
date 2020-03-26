@@ -12,15 +12,16 @@ class MyMENU
 {
 
 public:
-        enum t_MenuType {MainMenu,LEDMenu,ParamMenu, N_A};      // Main         - Основной экран   =0
+        enum t_MenuType {MainMenu,LEDMenu,ParamMenu, TestLedChnlBright, N_A};      // Main         - Основной экран   =0
                                                                 // LEDMenu      - меню LED экранов =1
                                                                 // Param        - меню параметров  =2
+                                                                // TestLedChnlBright -- меню тестирования яркости каналов. Функция LedChnlBrightSet
             
         enum t_MenuOperationMode {NotEdit,RowEdit};             // NotEdit      - Не редактируем  =0
                                                                 // RowSelect    - Режим выбора строки =1
                                                                 // RowEdit      - Режим редактированя строки  =2
         static byte MenuAmount;                                 // статическая переменнуая-член класса, счетчик обьектов класса
-        void (*ptr_on_click)(int8_t) =nullptr;	                            // Указатель на функцию вызова обрабоки изменения значения, параметр +1 или -1)
+        void (*ptr_on_click)(int8_t) = nullptr;	                // Указатель на функцию вызова обрабоки изменения значения, параметр +1 или -1)
 
 
 
@@ -39,7 +40,7 @@ MyMENU(t_MenuType , char* , char*, void(*on_click)(int8_t), int8_t);
     {
         char str[80];
         
-        Serial.print(_MenuType);   Serial.print(", "); 
+        Serial.print(_MenuType);       Serial.print(", "); 
         Serial.print(_ptr_Row1);       Serial.print(", "); 
         Serial.print(_ptr_Row2);       Serial.print(", "); 
         
@@ -53,7 +54,7 @@ MyMENU(t_MenuType , char* , char*, void(*on_click)(int8_t), int8_t);
 
 void SetMenuType (t_MenuType);
 
-void UpdateRow2_Value();                            //функция берет значение из указателя на внешний параметр (_ptr_Row2_ParamValue) и превращает его в строку экрана _Row2
+void UpdateRow2_Value();                 //функция берет значение из указателя на внешний параметр (_ptr_Row2_ParamValue) и превращает его в строку экрана _Row2
 void UpdateRow (byte, char *,  float *,  char *,  float *);
 void UpdateRow (byte, const char *);
 void UpdateRow (byte, const char *, const uint8_t *);

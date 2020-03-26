@@ -2,7 +2,7 @@
 #define BUTTONS_H
 
 #include "Arduino.h"
-#define KeyNotReactInterval 500 	// время с последнего нажатия кнопки в рамках которого мы не реагируем на новое нажатие 	
+#define KeyNotReactInterval 300 //500	// время с последнего нажатия кнопки в рамках которого мы не реагируем на новое нажатие 	
 #define KeyTimeForStiky	 	3000 	// Количество мс нажатия одной и той же кнопки после которого считаем что есть залипание 
 #define ToleranceLevel 		50		// чуствительность (граница диапазона)  для Button::GetButtonNumberByValue
 
@@ -23,7 +23,7 @@
 	public:
 			enum t_PressedKey {Forward=0, Setup_Ok, Back, Cancel} ;
 			Button(int);
-			int8_t KeyPressedCode ();		// возвращает код нажатой кнопки или -1 если кнопка не нажата			
+			int8_t KeyPressedCode (const uint32_t &currentMillis);		// возвращает код нажатой кнопки или -1 если кнопка не нажата			
 	};
 
 #endif

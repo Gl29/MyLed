@@ -38,7 +38,7 @@ bool DS18_SetResolution(OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettin
 	//byte DS18_Sensors_tmp_addr[8];
 
     #ifdef  MyDEBUG_DS18_SetDS18_resolution 
-         Serial.println("Func DS18_SetDS18_resolution start: ");
+         Serial.println(F("Func DS18_SetDS18_resolution start: "));
     #endif
     // задаём параметры точности датчиков
 
@@ -68,7 +68,7 @@ bool DS18_SetResolution(OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettin
     }
 
     #ifdef  DEBUG_DS18_SetDS18_resolution 
-        Serial.print("DS18_WriteConfByte=");
+        Serial.print(F("DS18_WriteConfByte="));
         Serial.println(tData[4], HEX);
     #endif
 
@@ -79,7 +79,7 @@ bool DS18_SetResolution(OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettin
 void DS18_InitConversion(OneWire &DS18_OneWare, byte DS18_Sensors_addr[8])
 { // Функция отправляет всем датчикам команду начать измерение температуры
     #ifdef  DEBUG_DS18_InitConversion 
-         Serial.println("Func DS18_InitConversion start: ");
+         Serial.println(F("Func DS18_InitConversion start: "));
     #endif
     
     DS18_OneWare.reset();
@@ -97,7 +97,7 @@ bool DS1822_init (OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSettings)
     byte DS18SensorsInitOk[2];
    
     #ifdef  DEBUG_DS1822_init 
-         Serial.println("Func DS1822_init start: ");
+         Serial.println(F("Func DS1822_init start: "));
     #endif
 
     //CurrDsSettings.last_Call_Time = now();   // Время инициализации датчиков = текущему  //DS18_last_Call_Time
@@ -140,7 +140,7 @@ float DS18_ReadTemp( OneWire &DS18_OneWare,   struct_DS18_setting &CurrDsSetting
    // Функция определяет тип подключённого датчика с уникальным ID который указан по адресу DS18_Sensors_addr 
 {  // и получает от него температуру
     #ifdef  DEBUG_DS18_ReadTemp
-         Serial.println("Func DS18_ReadTemp start: ");
+         Serial.println(F("Func DS18_ReadTemp start: "));
     #endif
 
 
@@ -244,15 +244,15 @@ boolean DS18_sensorRequest (OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSe
    // именно эта функция инициирует получение температуры
 { // Функция даёт датчикам команду на считывание температуры и на ёё преобразование
     #ifdef  DEBUG_DS18_sensorRequest 
-         Serial.println("Func DS18_sensorRequest: ");
+         Serial.println(F("Func DS18_sensorRequest: "));
     #endif
     if (CurrDsSettings.readstage == 0)
     {
-        #ifdef  DEBUG_DS18_sensorRequest
-            Serial.print("DS18_readstage: ");            
-            Serial.println(DS18_readstage);
-            Serial.println("Call 'ConvertCommand' ...");
-        #endif
+        // #ifdef  DEBUG_DS18_sensorRequest
+        //     Serial.print("DS18_readstage: ");            
+        //     Serial.println(DS18_readstage);
+        //     Serial.println("Call 'ConvertCommand' ...");
+        // #endif
 
         DS18_InitConversion(DS18_OneWare, CurrDsSettings.ptr_Adr); //DS18_pAdr);
         CurrDsSettings.readstage++;
@@ -260,12 +260,12 @@ boolean DS18_sensorRequest (OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSe
         }
     else
     {
-        #ifdef  DEBUG_DS18_sensorRequest 
-            Serial.println();
-            Serial.print("DS18_readstage: ");            
-            Serial.println(DS18_readstage);
-            Serial.println("Call 'ConvertCommand' ...");
-        #endif
+        // #ifdef  DEBUG_DS18_sensorRequest 
+        //     Serial.println();
+        //     Serial.print("DS18_readstage: ");            
+        //     Serial.println(DS18_readstage);
+        //     Serial.println("Call 'ConvertCommand' ...");
+        // #endif
 
 
         if (DS18_OneWare.read()) // если OneWare находится в статусе read (показания температуры сконвертированы и доступны для чтения)
@@ -280,30 +280,60 @@ boolean DS18_sensorRequest (OneWire &DS18_OneWare, struct_DS18_setting &CurrDsSe
             //DS18_TempToChar(CurrDsSettings); // создаём char строку в struct_DS18_setting.CurrTempD1D2Char[16]            
 
 
-            if (CurrDsSettings.CurrentTemp_D1 > CurrDsSettings.TargetTemp_D1) {
+            if (CurrDsSettings.CurrentTemp_D1 > CurrDsSettings.TargetTemp_D1) 
+            {
+                #ifdef  DEBUG_DS18_sensorRequest 
+                    Serial.print (F("CurrentTemp_D1 > TargetTemp_D1"));
+                    Serial.print (F("D1_tempCounter.Before = ")); Serial.println (CurrDsSettings.D1_tempCounter, BIN);
+                #endif
                 CurrDsSettings.D1_tempCounter = CurrDsSettings.D1_tempCounter << 1; // <<	Сдвиг влево
                 CurrDsSettings.D1_tempCounter = CurrDsSettings.D1_tempCounter ^ 1;  //исключающее ИЛИ "^" выдает истину, если только один из операндов истинен. В противном случае получается ложь.
-                }
-                else
-                {CurrDsSettings.D1_tempCounter = CurrDsSettings.D1_tempCounter << 1; // <<	Сдвиг влево первому биту будет присвоен 0
+            
+                #ifdef  DEBUG_DS18_sensorRequest 
+                    Serial.print (F("D1_tempCounter.After= ")); Serial.println (CurrDsSettings.D1_tempCounter, BIN);
+                #endif
+            }
+            else
+            {
+                CurrDsSettings.D1_tempCounter = CurrDsSettings.D1_tempCounter << 1; // <<	Сдвиг влево первому биту будет присвоен 0
             }
 
-            if (CurrDsSettings.CurrentTemp_D2 > CurrDsSettings.TargetTemp_D2) {
+
+            if (CurrDsSettings.CurrentTemp_D2 > CurrDsSettings.TargetTemp_D2) 
+            {
+                #ifdef  DEBUG_DS18_sensorRequest 
+                    Serial.print (F("CurrentTemp_D2 > TargetTemp_D2"));
+                    Serial.print (F("D2_tempCounter.Before = ")); Serial.println (CurrDsSettings.D2_tempCounter, BIN);
+                #endif
                 CurrDsSettings.D2_tempCounter = CurrDsSettings.D2_tempCounter << 1; // <<	Сдвиг влево
-                CurrDsSettings.D2_tempCounter = CurrDsSettings.D2_tempCounter ^ 1;  //исключающее ИЛИ "^" выдает истину, если только один из операндов истинен. В противном случае получается ложь.
-                }
-                else
-                {CurrDsSettings.D2_tempCounter = CurrDsSettings.D2_tempCounter << 1; // <<	Сдвиг влево первому биту будет присвоен 0
+                CurrDsSettings.D2_tempCounter = CurrDsSettings.D2_tempCounter ^ 1;  //исключаю щее ИЛИ "^" выдает истину, если только один из операндов истинен. В противном случае получается ложь.
+
+                #ifdef  DEBUG_DS18_sensorRequest 
+                    Serial.print (F("D2_tempCounter.After= ")); Serial.println (CurrDsSettings.D2_tempCounter, BIN);
+                #endif
+
+
             }
+            else
+            {
+                CurrDsSettings.D2_tempCounter = CurrDsSettings.D2_tempCounter << 1; // <<	Сдвиг влево первому биту будет присвоен 0
+            }
+
 
             #ifdef  DEBUG_DS18_sensorRequest 
                 Serial.println(CurrDsSettings.CurrentTemp_D1, 5);
                 Serial.println(CurrDsSettings.CurrentTemp_D2, 5);
+
+                Serial.print (F("CurrDsSettings.TargetTemp_D1= "));
+                Serial.println (CurrDsSettings.TargetTemp_D1);
+                Serial.print (F("CurrDsSettings.TargetTemp_D2= "));
+                Serial.println (CurrDsSettings.TargetTemp_D2);
+
     
-                Serial.print ("CurrDsSettings.D1_tempCounter (byte)= ");
+                Serial.print (F("CurrDsSettings.D1_tempCounter (byte)= "));
                 Serial.println (CurrDsSettings.D1_tempCounter, BIN);
 
-                Serial.print ("CurrDsSettings.D2_tempCounter (byte)= ");
+                Serial.print (F("CurrDsSettings.D2_tempCounter (byte)= "));
                 Serial.println (CurrDsSettings.D2_tempCounter, BIN);
             #endif
 

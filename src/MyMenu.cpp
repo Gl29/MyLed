@@ -4,6 +4,9 @@
 // ------------------------------
 // !!! Внимание, на досуге правильно переписать конструкторы с целью оптимизации кода, 
 // посмотреть статью по поводу делегирования конструкторов
+
+byte MyMENU::MenuAmount=0;                      // инициация счётчика количества членов класса MyMENU
+
 MyMENU::MyMENU()
 {
  MyMENU::MenuAmount++; //увеличиваем счётчик созданных меню на 1 
@@ -52,8 +55,8 @@ MyMENU::MyMENU(t_MenuType MenuType, char *Row1, char *Row2, void(*on_click)(int8
 {MyMENU();}
 // ---------------------------------------------------------------------------------------------------------------------------------
 
-void MyMENU::SetMenuType (t_MenuType MenuType)
 // задаём тип меню
+void MyMENU::SetMenuType (t_MenuType MenuType)
 { 
    _MenuType=MenuType;
 }  
@@ -107,30 +110,6 @@ void MyMENU::UpdateRow (byte RowNumb,   char *Row1,  float *param1,  char *Row2,
 }
 
 
-// void MyMENU::UpdateRow (byte RowNumb, const char *Row, const uint8_t *RowParamValue)
-// // добавляем строку char[] RowNumb на экран (uint_8)
-// {   
-//     // Serial.print("*param1=");
-//     // Serial.println(*param1);
-//     char chrTMP[2];
-//     //sprintf(chrTMP, "%d", *RowParamValue);
-//     sprintf(chrTMP, "%c%d", '=',*RowParamValue);
-
-
-//     char chrTMP_1[16]= {'\0'};  // в этот массив собираем итоговую строку
-//     strcat(chrTMP_1, Row); 
-//     //strcat(chrTMP_1, "="); 
-//     strcat(chrTMP_1,  chrTMP);    
-
-//     if (strlen(chrTMP_1)<16){
-//         while (strlen(chrTMP_1)<16){strcat(chrTMP_1, " \0");} // "Добиваем" строчку  пробелами
-//     }
-//     if(RowNumb ==1) {strcpy(_ptr_Row1, chrTMP_1);}
-//     else            {strcpy(_ptr_Row2, chrTMP_1);}
-// }
-
-
-
 void MyMENU::UpdateRow (byte RowNumb, const char *Row)
 // добавляем строку char[] RowNumb на экран (uint_8)
 {   
@@ -143,6 +122,8 @@ void MyMENU::UpdateRow (byte RowNumb, const char *Row)
     if(RowNumb ==1) {strcpy(_ptr_Row1, chrTMP_1);}
     else            {strcpy(_ptr_Row2, chrTMP_1);}
 }
+
+
 
 
 char *MyMENU::GetRow (byte RowNumber) //char* GetRow (byte RowNumber)

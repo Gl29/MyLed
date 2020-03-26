@@ -5,24 +5,59 @@
 	    /**	Конструктор класса **/	
     LedChannel::LedChannel ( char *_Name, uint8_t _cBR)   
     {
-        channelName         = _Name;
-        targetChannelBrightness   =_cBR>MaxBrightness?MaxBrightness:_cBR;
-        ptr_channelBrightness = &targetChannelBrightness;
+        channelName         		= _Name;
+        targetChnlBright_percent	=_cBR>MaxBrightness?MaxBrightness:_cBR;
+        ptr_channelBrightness		= &targetChnlBright_percent;
         
     }    
 
-	// функция рассчёта к-та яркости для канала с учётом рассвета/заката
-	void LedChannel::update_PWM_Level (uint8_t CurrHour, uint8_t CurrMinute)
+	// увеличиваем яркость на 1%
+    void LedChannel::BrightnessUP()      
+		{
+			// targetChnlBright_percent=(targetChnlBright_percent+1)>MaxBrightness?MaxBrightness:targetChnlBright_percent+1;
+			if (targetChnlBright_percent>=MaxBrightness)
+			{targetChnlBright_percent=MaxBrightness;}
+			else
+			{targetChnlBright_percent +=1;}
+			// Serial.print(F("targetChnlBright_percent="));
+			// Serial.println(targetChnlBright_percent);
+
+		}
+
+    // уменьшаем яркость на 1%
+	void LedChannel::BrightnessDOWN()
+	    {
+			targetChnlBright_percent=targetChnlBright_percent==0? 0:targetChnlBright_percent-1;
+		}   
+
+
+
+	// функция рассчёта к-та яркости для канала без учёта рассвета/заката ()
+	void LedChannel::update_PWM_Level_1 ()
 	{
-		//static
+		uint32_t tmpPWM_Level=0;
+		tmpPWM_Level = 1*MaxBrightnessABS;
+		tmpPWM_Level=tmpPWM_Level*targetChnlBright_percent;
+		// tmpPWM_Level=tmpPWM_Level*coeffBright;
+		// tmpPWM_Level=tmpPWM_Level/MaxBrightness;
+
+		PWM_channel_level=tmpPWM_Level/MaxBrightness;
+
+		// Serial.print (F("PWM_channel_level=")); Serial.println(PWM_channel_level, DEC);
+		// PWM_channel_level=tmpPWM_Level/100;
+	}
+
+
+	// функция рассчёта к-та яркости для канала с учётом рассвета/заката
+	void LedChannel::update_PWM_Level (uint8_t &CurrHour, uint8_t &CurrMinute)
+	{
 		uint16_t currTime;                            
-		//uint16_t timeIntervalFromStartTimer;      // интервал прошедший с момента старта таймера (время старата таймера минут текушее время)
-		const uint16_t minInHour = 60 ;                  // минут в часе 
+		const uint16_t minInHour = 60 ;             // минут в часе 
 		uint8_t coeffBright;                        // расчётный к-т яркости (в %%)
 
-		currTime = (minInHour*CurrHour+CurrMinute);      // текушее время = текщий час*60+текущие минуты
+		currTime = (minInHour*CurrHour+CurrMinute); // текушее время = текщий час*60+текущие минуты
 
-		for(int i=0; i<2; i++)                        // у нас два таймера для канала надо обработать оба
+		for(int i=0; i<2; i++)                      // у нас два таймера для канала надо обработать оба
 		{
 			// рассчитываем кт яркости (плавный рассвет/закат)
 			// если текущее время находится в зоне действия таймера:
@@ -33,71 +68,47 @@
 					if (currTime <= LedTimerParam[i].hourOn*minInHour+LedTimerParam[i].minuteOn+LedTimerParam[i].dimmingOnDuration)
 					{
 						uint16_t timeIntervalFromStartTimer = currTime - (int16_t)(LedTimerParam[i].hourOn*minInHour+LedTimerParam[i].minuteOn);
-					//	coeffBright = 1.0*timeIntervalFromStartTimer/LedTimerParam[i].dimmingOnDuration;
 						coeffBright = 100*timeIntervalFromStartTimer/LedTimerParam[i].dimmingOnDuration;
-						// coeffBright = coeffBright>1.0 ? 1.0: coeffBright;    
-					//	delay (300);	
 					}
 
 					// для плавного увеличения яркости				
 					else if (currTime >= (LedTimerParam[i].hourOff*minInHour+LedTimerParam[i].minuteOff - LedTimerParam[i].dimmingOffDuration))
 					{
-						// coeffBright = 1.0*(LedTimerParam[i].hourOff*minInHour+LedTimerParam[i].minuteOff-currTime)/LedTimerParam[i].dimmingOffDuration;
 						coeffBright = 100*(LedTimerParam[i].hourOff*minInHour+LedTimerParam[i].minuteOff-currTime)/LedTimerParam[i].dimmingOffDuration;
-					//	delay (300);
 					}
 					
-					// есди не надо снижать или повышать
+					// если не надо снижать или повышать
 					else 
 					{
-						// coeffBright=1.0;
 						coeffBright=100;						
 					}        
-			
-
-				
-				// uint32_t tmpI;
-				// tmpI = (int32_t)(100*coeffBright);
-
-		//		PWM_channel_level = (uint16_t)(targetChannelBrightness * coeffBright * (MaxBrightnessABS/MaxBrightness));
-				// PWM_channel_level = (uint16_t)(targetChannelBrightness * tmpI * (MaxBrightnessABS/MaxBrightness)/100);
-
-		// Serial.print ("\t");Serial.print ("\t");Serial.print ("\t");Serial.print ("\t");
 		
-				PWM_channel_level = 1*MaxBrightnessABS;
-				// Serial.print ("\t"); Serial.print(PWM_channel_level);
-				PWM_channel_level = PWM_channel_level*targetChannelBrightness;
-				// Serial.print ("\t"); Serial.print(PWM_channel_level);
-				PWM_channel_level = PWM_channel_level*coeffBright;		
-				// Serial.print ("\t"); Serial.print(PWM_channel_level);				
-				PWM_channel_level = PWM_channel_level/MaxBrightness;
-				// Serial.print ("\t"); Serial.println(PWM_channel_level);
-				PWM_channel_level = PWM_channel_level/100;
-				// Serial.print ("\t"); Serial.println(PWM_channel_level);				
-				
-
-				// uint32_t tmpI2 = MaxBrightnessABS*targetChannelBrightness*coeffBright/MaxBrightness/100;
-				// PWM_channel_level=tmpI2;
-
-				// Serial.print ("\t");Serial.print ("\t");Serial.print ("\t");Serial.print ("\t");
-				//  Serial.print("Timer NO="); Serial.print(i);    Serial.print ("\t");
-				//  Serial.print("tmpI="); Serial.print(tmpI);	
-				//  Serial.print("coeffBright="); Serial.print(coeffBright);					 
-				//  Serial.print ("\t"); Serial.print("PWM_channel_level="); Serial.print(PWM_channel_level); 
-
+				{	
+					uint32_t tmpPWM_Level=0;
+					tmpPWM_Level = 1*MaxBrightnessABS;
+					tmpPWM_Level=tmpPWM_Level*targetChnlBright_percent;
+					tmpPWM_Level=tmpPWM_Level*coeffBright;
+					tmpPWM_Level=tmpPWM_Level/MaxBrightness;
+					PWM_channel_level=static_cast<uint16_t>(tmpPWM_Level/100);
+				}
 				return;
 			}   
-			// else 
-			// {
-			// 	PWM_channel_level = 0;
-			// }
+			else 
+			{
+				PWM_channel_level = 0;
+			}
 
 
 			
 			
 			// Serial.print (F("Channel=")); Serial.print (channelName);
-			// Serial.print (F("   Timer №_")); Serial.print (i);
-			// Serial.print (",  PWM_channel_level="); Serial.println (PWM_channel_level);
+			// Serial.print (F("    Timer №_")); Serial.print (i);
+			//Serial.print (F(",  PWM_channel_level=")); Serial.println (PWM_channel_level);
+			//Serial.print (F("PWM_channel_level="));// Serial.println (PWM_channel_level);
+			//  memoryReport("BeforeSerialPrint");
+			//  Serial.println ("PWM_channel_level=");// Serial.println (PWM_channel_level);
+			// memoryReport("After");
+			// 	delay(500);
 		}
 
 

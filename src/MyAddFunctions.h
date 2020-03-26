@@ -1,5 +1,5 @@
 #include "Arduino.h"
-#include <TimeLib.h>
+//#include <TimeLib.h>
 
 // // пока отключил за ненадобностью на данном этапе разработки
 // //// структура для хранение / ведения кодов возникающих ошибок
@@ -29,3 +29,9 @@ String printDigits(int);
 //     return dtostrf(f_val,7, 3, outstr);
 
 // }
+
+
+
+// Функция определяет количество дней, прошедших с Рождества Христова
+// до указанного дня. 
+uint32_t dayFromXmass(const int day,const int month,const int year); 
